@@ -245,6 +245,8 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .barcode-btn-clear:hover{background:rgba(255,255,255,.1);color:#c8a8f0}
 .barcode-pulse{width:8px;height:8px;border-radius:50%;background:#7ee8a2;flex-shrink:0;animation:bp 1.5s infinite}
 @keyframes bp{0%,100%{opacity:1}50%{opacity:.3}}
+
+.results-table th[onclick]:hover{background:var(--accent-l);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -526,7 +528,17 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     </div>
     <div class="table-wrap">
       <table class="results-table">
-        <thead><tr><th>Insumo</th><th>N° Catálogo</th><th>N° Lote</th><th>Hoja</th><th>Llegada</th><th>Vencimiento</th><th>Temp.</th><th>Estado</th><th>Período de uso</th></tr></thead>
+        <thead><tr id="consulta-thead">
+          <th onclick="sortConsulta('nombre')" style="cursor:pointer;user-select:none">Insumo <span id="sort-nombre"></span></th>
+          <th onclick="sortConsulta('catalogo')" style="cursor:pointer;user-select:none">N° Catálogo <span id="sort-catalogo"></span></th>
+          <th>N° Lote</th>
+          <th onclick="sortConsulta('anio')" style="cursor:pointer;user-select:none">Hoja <span id="sort-anio"></span></th>
+          <th onclick="sortConsulta('fecha')" style="cursor:pointer;user-select:none">Llegada <span id="sort-fecha"></span></th>
+          <th onclick="sortConsulta('vencimiento')" style="cursor:pointer;user-select:none">Vencimiento <span id="sort-vencimiento"></span></th>
+          <th>Temp.</th>
+          <th onclick="sortConsulta('estado')" style="cursor:pointer;user-select:none">Estado <span id="sort-estado"></span></th>
+          <th>Período de uso</th>
+        </tr></thead>
         <tbody id="consulta-tbody"></tbody>
       </table>
     </div>
@@ -565,8 +577,9 @@ let nextLocalId   = 1;
 let bajaSelectedId = null;
 let consultaFilter = 'todos';
 let consultaQuery  = '';
+let consultaSort   = { col: 'fecha', dir: 'desc' }; // columna y dirección de ordenamiento
 let dashYear       = 'todos';
-let consultaYear   = 'todos';
+let consultaYear   = 'todos'; // se actualiza al año más reciente al cargar
 const altaSugs     = {nombre:[], catalogo:[], lote:[]};
 let tokenClient;
 let gapiReady = false;
@@ -589,7 +602,9 @@ function gisLoaded() {
     scope: SCOPES,
     callback: async (resp) => {
       if (resp.error) {
-        setLoginStatus('Error al autenticar: ' + resp.error, true);
+        // Si fallo el login silencioso, mostrar pantalla de login normal
+        document.getElementById('login-screen').style.display = 'flex';
+        setLoginStatus('Hacé clic para ingresar', false);
         return;
       }
       await afterLogin();
@@ -609,9 +624,11 @@ function maybeReady() {
   if (!gapiReady || !gisReady) return;
   const hint = loadHint();
   if (hint) {
-    // Ya se logueó antes: intentar obtener token sin popup
+    // Hubo login previo: entrar directo sin mostrar pantalla de login
+    document.getElementById('login-screen').style.display = 'none';
     setLoginStatus('Conectando…');
     tokenClient.requestAccessToken({ prompt: '', login_hint: hint });
+    // Si falla (token rechazado), el callback mostrará la pantalla de login
   } else {
     document.getElementById('login-status').textContent = 'Listo para conectar';
   }
@@ -625,8 +642,6 @@ function handleLogin() {
   }
   setLoginStatus('Iniciando sesión…');
   const hint = loadHint();
-  // Si hay hint usamos prompt:'' para evitar el popup de seleccion de cuenta
-  // Si no hay hint (primera vez) usamos 'consent' para el flujo completo
   tokenClient.requestAccessToken({ prompt: hint ? '' : 'consent', login_hint: hint });
 }
 
@@ -688,7 +703,8 @@ async function syncFromSheets() {
       .sort();
 
     // 2. Read all sheets in batch
-    const ranges = sheetNames.map(y => `${y}!B:K`);
+    // Hojas 2022 y 2023 no tienen checkbox en col A, los datos empiezan en A
+    const ranges = sheetNames.map(y => ['2022','2023'].includes(y) ? `${y}!A:J` : `${y}!B:K`);
     if (!ranges.length) {
       stock = [];
       setSyncState('ok', 'Sin datos');
@@ -729,6 +745,9 @@ async function syncFromSheets() {
       });
     });
 
+    // Default: mostrar el año más reciente en Consultas
+    const años = [...new Set(stock.map(getAnio))].sort();
+    if (años.length) consultaYear = años[años.length-1];
     setSyncState('ok', 'Sincronizado');
     toast(`✓ ${stock.length} insumos cargados de ${sheetNames.length} hoja${sheetNames.length!==1?'s':''}`);
     renderAll();
@@ -911,7 +930,7 @@ function showPage(id) {
 // YEAR TABS
 // ═══════════════════════════════════════════════════════════════
 function renderYearTabs(containerId, currentYear, onSelectFn) {
-  const años = getAnios();
+  const años = getAnios().slice().reverse(); // más reciente primero
   const container = document.getElementById(containerId);
   if (!container) return;
   let html = `<button class="year-tab ${currentYear==='todos'?'active':''}" onclick="${onSelectFn}('todos')">
@@ -1266,6 +1285,22 @@ document.addEventListener('click',e=>{
   if(!e.target.closest('.search-wrap')) document.getElementById('ac-list')?.classList.remove('show');
 });
 
+function parseFecha(str) {
+  if (!str) return new Date(0);
+  if (str.includes('/')) { const [d,m,y]=str.split('/'); return new Date(`${y}-${m}-${d}`); }
+  return new Date(str);
+}
+
+function sortConsulta(col) {
+  if (consultaSort.col === col) {
+    consultaSort.dir = consultaSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    consultaSort.col = col;
+    consultaSort.dir = 'asc';
+  }
+  renderConsulta();
+}
+
 function renderConsulta() {
   renderYearTabs('consulta-year-tabs', consultaYear, 'setConsultaYear');
   let items = consultaYear==='todos' ? stock : stock.filter(i=>getAnio(i)===consultaYear);
@@ -1274,6 +1309,34 @@ function renderConsulta() {
     i.catalogo.toLowerCase().includes(consultaQuery)||
     i.lote.toLowerCase().includes(consultaQuery));
   if (consultaFilter!=='todos') items=items.filter(i=>getEstado(i)===consultaFilter);
+
+  // Ordenamiento
+  const { col, dir } = consultaSort;
+  const mult = dir === 'asc' ? 1 : -1;
+
+  // Si filtro es "vence", ordenar siempre por vencimiento ascendente (más próximo primero)
+  if (consultaFilter === 'vence' && col === 'fecha') {
+    items = [...items].sort((a,b) => (parseFecha(a.vencimiento) - parseFecha(b.vencimiento)));
+  } else {
+    items = [...items].sort((a,b) => {
+      let va, vb;
+      if (col==='nombre')      { va=a.nombre;      vb=b.nombre; }
+      else if (col==='catalogo'){ va=a.catalogo;    vb=b.catalogo; }
+      else if (col==='anio')   { va=getAnio(a);    vb=getAnio(b); }
+      else if (col==='fecha')  { return mult*(parseFecha(a.fecha)-parseFecha(b.fecha)); }
+      else if (col==='vencimiento'){ return mult*(parseFecha(a.vencimiento)-parseFecha(b.vencimiento)); }
+      else if (col==='estado') { va=getEstado(a);  vb=getEstado(b); }
+      else { return mult*(parseFecha(a.fecha)-parseFecha(b.fecha)); }
+      return mult * va.localeCompare(vb);
+    });
+  }
+
+  // Actualizar indicadores visuales en headers
+  ['nombre','catalogo','anio','fecha','vencimiento','estado'].forEach(c => {
+    const el = document.getElementById('sort-'+c);
+    if (!el) return;
+    el.textContent = consultaSort.col===c ? (consultaSort.dir==='asc' ? ' ↑' : ' ↓') : '';
+  });
 
   const tbody=document.getElementById('consulta-tbody');
   const count=document.getElementById('consulta-count');

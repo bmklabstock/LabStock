@@ -616,6 +616,8 @@ function gisLoaded() {
         setLoginStatus('Hacé clic para ingresar', false);
         return;
       }
+      saveToken(resp);
+      gapi.client.setToken({ access_token: resp.access_token });
       await afterLogin();
     }
   });
@@ -623,22 +625,50 @@ function gisLoaded() {
   maybeReady();
 }
 
-// Guardamos el hint de cuenta (email) para que Google pre-seleccione sin popup
-const LS_HINT = 'labstock_login_hint';
+// Token en sessionStorage: persiste en F5 pero no al cerrar la pestaña
+const SS_TOKEN = 'labstock_token';
+const LS_HINT  = 'labstock_hint';
+
+function saveToken(resp) {
+  try {
+    const exp = Date.now() + (resp.expires_in || 3600) * 1000 - 60000;
+    sessionStorage.setItem(SS_TOKEN, JSON.stringify({ access_token: resp.access_token, exp }));
+  } catch(e) {}
+}
+function loadToken() {
+  try {
+    const raw = sessionStorage.getItem(SS_TOKEN);
+    if (!raw) return null;
+    const t = JSON.parse(raw);
+    if (Date.now() > t.exp) { sessionStorage.removeItem(SS_TOKEN); return null; }
+    return t;
+  } catch(e) { return null; }
+}
+function clearToken() { try { sessionStorage.removeItem(SS_TOKEN); } catch(e) {} }
+
 function saveHint(email) { try { localStorage.setItem(LS_HINT, email); } catch(e) {} }
 function loadHint() { try { return localStorage.getItem(LS_HINT) || ''; } catch(e) { return ''; } }
 function clearHint() { try { localStorage.removeItem(LS_HINT); } catch(e) {} }
 
 function maybeReady() {
   if (!gapiReady || !gisReady) return;
-  const hint = loadHint();
-  if (hint) {
-    // Hubo login previo: mostrar overlay de carga, ocultar pantalla de login
+  const saved = loadToken();
+  if (saved) {
+    // Token válido en esta sesión (F5): entrar directo, sin ningún popup
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('loading-overlay').style.display = 'flex';
-    tokenClient.requestAccessToken({ prompt: '', login_hint: hint });
+    gapi.client.setToken({ access_token: saved.access_token });
+    afterLogin();
   } else {
-    document.getElementById('login-status').textContent = 'Listo para conectar';
+    const hint = loadHint();
+    if (hint) {
+      // Nueva pestaña con cuenta conocida: login silencioso (1 popup breve)
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('loading-overlay').style.display = 'flex';
+      tokenClient.requestAccessToken({ prompt: '', login_hint: hint });
+    } else {
+      document.getElementById('login-status').textContent = 'Listo para conectar';
+    }
   }
 }
 
@@ -659,6 +689,7 @@ function handleLogout() {
     google.accounts.oauth2.revoke(token.access_token);
     gapi.client.setToken('');
   }
+  clearToken();
   clearHint();
   stock = [];
   sheetNames = [];
@@ -674,7 +705,7 @@ async function afterLogin() {
       headers: { Authorization: 'Bearer ' + gapi.client.getToken().access_token }
     });
     const info = await resp.json();
-    if (info.email) saveHint(info.email); // guardar para login sin popup
+    if (info.email) saveHint(info.email);
     document.getElementById('user-name').textContent = info.name || 'Usuario';
     document.getElementById('user-email').textContent = info.email || '';
     const wrap = document.getElementById('user-avatar-wrap');

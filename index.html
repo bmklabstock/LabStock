@@ -560,7 +560,13 @@ function gisLoaded() {
     scope: SCOPES,
     callback: async (resp) => {
       if (resp.error) {
-        setLoginStatus('Error al autenticar: ' + resp.error, true);
+        if (resp.error === 'popup_blocked_by_browser') {
+          setLoginStatus('⚠ El navegador bloqueó el popup — permití las ventanas emergentes para este sitio y volvé a intentar', true);
+        } else if (resp.error === 'access_denied') {
+          setLoginStatus('Acceso denegado — aceptá los permisos de Google para continuar', true);
+        } else {
+          setLoginStatus('Error: ' + resp.error + ' — intentá de nuevo', true);
+        }
         return;
       }
       await afterLogin();
@@ -640,11 +646,17 @@ function handleLogout() {
 }
 
 async function afterLogin() {
+  // Verificar que el token realmente existe antes de usarlo
+  const token = gapi.client.getToken();
+  if (!token || !token.access_token) {
+    setLoginStatus('No se obtuvo el token — intentá de nuevo', true);
+    return;
+  }
   try {
     const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: 'Bearer ' + gapi.client.getToken().access_token }
+      headers: { Authorization: 'Bearer ' + token.access_token }
     });
-    if (!resp.ok) throw new Error('token invalido');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const info = await resp.json();
 
     // Guardar para la próxima vez
@@ -665,7 +677,7 @@ async function afterLogin() {
     await syncFromSheets();
   } catch(e) {
     gapi.client.setToken('');
-    setLoginStatus('Error al conectar — intentá de nuevo', true);
+    setLoginStatus('Error al conectar (' + e.message + ') — intentá de nuevo', true);
   }
 }
 

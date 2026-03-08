@@ -622,7 +622,7 @@ function handleLogin() {
   // Si hay cuenta recordada usamos prompt:'select_account' para que Google
   // pre-seleccione esa cuenta en el popup (un click menos).
   // Si no hay cuenta recordada, prompt:'consent' para flujo normal.
-  tokenClient.requestAccessToken({ prompt: remembered ? 'select_account' : 'consent' });
+  tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
 function handleLogout() {

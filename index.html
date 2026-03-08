@@ -535,38 +535,21 @@ let gisReady  = false;
 // ═══════════════════════════════════════════════════════════════
 // GOOGLE IDENTITY / AUTH
 // ═══════════════════════════════════════════════════════════════
-// ── Persistencia de sesión en localStorage ──────────────────────
-const LS_TOKEN = 'labstock_token';
-const LS_USER  = 'labstock_user';
+// ── Caché de perfil de usuario (nombre, email, foto) ────────────
+// El token de Google dura solo ~1 hora, no vale la pena guardarlo.
+// Sí guardamos el perfil para mostrarlo rápido, y usamos
+// prompt:'select_account' / '' para que Google no pida popup
+// si el usuario ya autorizó la app en este navegador.
+const LS_USER = 'labstock_user';
 
-function saveSession(token, userInfo) {
-  try {
-    // El token de Google dura 3600s; guardamos con timestamp de expiración
-    const expires = Date.now() + (token.expires_in || 3600) * 1000 - 60000; // -1min margen
-    localStorage.setItem(LS_TOKEN, JSON.stringify({ ...token, expires }));
-    if (userInfo) localStorage.setItem(LS_USER, JSON.stringify(userInfo));
-  } catch(e) {}
+function saveUserCache(info) {
+  try { localStorage.setItem(LS_USER, JSON.stringify(info)); } catch(e) {}
 }
-
-function loadSession() {
-  try {
-    const raw = localStorage.getItem(LS_TOKEN);
-    if (!raw) return null;
-    const token = JSON.parse(raw);
-    if (Date.now() > token.expires) { clearSession(); return null; }
-    return token;
-  } catch(e) { return null; }
+function loadUserCache() {
+  try { const r = localStorage.getItem(LS_USER); return r ? JSON.parse(r) : null; } catch(e) { return null; }
 }
-
-function clearSession() {
-  try { localStorage.removeItem(LS_TOKEN); localStorage.removeItem(LS_USER); } catch(e) {}
-}
-
-function loadUserFromCache() {
-  try {
-    const raw = localStorage.getItem(LS_USER);
-    return raw ? JSON.parse(raw) : null;
-  } catch(e) { return null; }
+function clearUserCache() {
+  try { localStorage.removeItem(LS_USER); } catch(e) {}
 }
 // ────────────────────────────────────────────────────────────────
 
@@ -584,11 +567,11 @@ function gisLoaded() {
     scope: SCOPES,
     callback: async (resp) => {
       if (resp.error) {
+        // 'access_denied' o error real → mostrar botón
         setLoginStatus('Error al autenticar: ' + resp.error, true);
+        document.getElementById('login-screen').style.display = 'flex';
         return;
       }
-      // Guardar token recién obtenido
-      saveSession(gapi.client.getToken(), null);
       await afterLogin();
     }
   });
@@ -598,18 +581,16 @@ function gisLoaded() {
 
 function maybeReady() {
   if (!gapiReady || !gisReady) return;
-  // Intentar restaurar sesión guardada
-  const saved = loadSession();
-  if (saved) {
-    setLoginStatus('Restaurando sesión…');
-    gapi.client.setToken(saved);
-    // Verificar que el token siga siendo válido con una llamada mínima
-    afterLogin().catch(() => {
-      // Token inválido/revocado → limpiar y pedir login normal
-      clearSession();
-      gapi.client.setToken('');
-      setLoginStatus('Sesión expirada — iniciá sesión nuevamente');
-    });
+
+  // Si hay perfil cacheado, intentar obtener token silenciosamente (sin popup).
+  // Google lo concede sin interacción si la sesión del navegador sigue activa
+  // y el usuario ya autorizó la app antes.
+  const cached = loadUserCache();
+  if (cached) {
+    setLoginStatus('Conectando…');
+    // prompt:'' = sin UI, falla si no puede renovar silenciosamente
+    tokenClient.requestAccessToken({ prompt: '' });
+    // El callback de tokenClient maneja éxito y error
   } else {
     setLoginStatus('Listo para conectar');
   }
@@ -621,14 +602,8 @@ function handleLogin() {
     setTimeout(handleLogin, 800);
     return;
   }
-  setLoginStatus('Iniciando sesión…');
-  // Sin token guardado → pedir consentimiento la primera vez
-  // Con token guardado en memoria (misma tab) → sin prompt
-  if (gapi.client.getToken() === null) {
-    tokenClient.requestAccessToken({ prompt: '' }); // Google re-usa la sesión del navegador sin popup si ya autorizó antes
-  } else {
-    tokenClient.requestAccessToken({ prompt: '' });
-  }
+  // prompt:'select_account' muestra el selector de cuenta de Google (sin pedir permisos extra si ya autorizó)
+  tokenClient.requestAccessToken({ prompt: 'select_account' });
 }
 
 function handleLogout() {
@@ -637,51 +612,43 @@ function handleLogout() {
     google.accounts.oauth2.revoke(token.access_token);
     gapi.client.setToken('');
   }
-  clearSession();
+  clearUserCache();
   stock = [];
   sheetNames = [];
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  setLoginStatus('Sesión cerrada');
+  setLoginStatus('Sesión cerrada — hacé clic para volver a entrar');
 }
 
 async function afterLogin() {
-  // Intentar cargar perfil desde caché primero (evita fetch extra)
-  let info = loadUserFromCache();
-  if (!info) {
-    try {
-      const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: 'Bearer ' + gapi.client.getToken().access_token }
-      });
-      if (!resp.ok) throw new Error('token invalido');
-      info = await resp.json();
-      saveSession(gapi.client.getToken(), info);
-    } catch(e) {
-      clearSession();
-      throw e; // Propagado para que maybeReady() lo capture
-    }
-  } else {
-    // Refrescar datos de perfil en segundo plano sin bloquear
-    fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+  try {
+    const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: 'Bearer ' + gapi.client.getToken().access_token }
-    }).then(r => r.ok ? r.json() : null).then(fresh => {
-      if (fresh) saveSession(gapi.client.getToken(), fresh);
-    }).catch(()=>{});
-  }
+    });
+    if (!resp.ok) throw new Error('token invalido');
+    const info = await resp.json();
+    saveUserCache(info);
 
-  document.getElementById('user-name').textContent = info.name || 'Usuario';
-  document.getElementById('user-email').textContent = info.email || '';
-  const wrap = document.getElementById('user-avatar-wrap');
-  if (info.picture) {
-    wrap.innerHTML = `<img src="${info.picture}" class="user-avatar" referrerpolicy="no-referrer">`;
-  } else {
-    const initials = (info.name||'U').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-    wrap.innerHTML = `<div class="user-avatar-placeholder">${initials}</div>`;
-  }
+    document.getElementById('user-name').textContent = info.name || 'Usuario';
+    document.getElementById('user-email').textContent = info.email || '';
+    const wrap = document.getElementById('user-avatar-wrap');
+    if (info.picture) {
+      wrap.innerHTML = `<img src="${info.picture}" class="user-avatar" referrerpolicy="no-referrer">`;
+    } else {
+      const initials = (info.name||'U').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      wrap.innerHTML = `<div class="user-avatar-placeholder">${initials}</div>`;
+    }
 
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  await syncFromSheets();
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    await syncFromSheets();
+  } catch(e) {
+    // Token inválido o red caída → volver a pantalla de login limpia
+    clearUserCache();
+    gapi.client.setToken('');
+    document.getElementById('login-screen').style.display = 'flex';
+    setLoginStatus('No se pudo conectar — intentá de nuevo', true);
+  }
 }
 
 function setLoginStatus(msg, isError=false) {

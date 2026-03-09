@@ -1669,6 +1669,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Click outside table deselects all
 document.addEventListener('mousedown', e => {
+  // Don't clear selection if clicking inside the edit modal
+  if (e.target.closest('#modal-edicion')) return;
   if (!e.target.closest('#consulta-tbody') && !e.target.closest('.consulta-actions')) {
     getConsultaRows().forEach(r => setRowSelected(r, false));
     consultaLastIdx = null;

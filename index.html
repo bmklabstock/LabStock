@@ -776,6 +776,7 @@ async function afterLogin() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('loading-overlay').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  setAltaFechaHoy();
   await syncFromSheets();
 }
 
@@ -868,39 +869,59 @@ async function getSheetId(sheetName) {
   return sheet ? sheet.properties.sheetId : null;
 }
 
-async function writeRowsToSheet(sheetName, rows) {
-  // Find the last row that actually has data (to avoid the checkbox rows gap)
+async function writeRowsToSheet(sheetName, rows, catalogo) {
+  // Read cols B (fecha) and D (catalogo) to find insertion point
   const readResp = await gapi.client.sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: `${sheetName}!B:B`,
+    range: `${sheetName}!B:D`,
   });
-  const colB = readResp.result.values || [];
-  // lastDataRow = last row index (1-based) that has content in col B
-  let lastDataRow = 0;
-  for (let i = colB.length - 1; i >= 0; i--) {
-    if (colB[i] && colB[i][0] && colB[i][0].toString().trim() !== '') {
-      lastDataRow = i + 1; // 1-based
-      break;
+  const allRows = readResp.result.values || [];
+
+  let insertAfter = 1; // default: after header
+
+  if (catalogo) {
+    // Find last row that has this catalogo in col D (index 2 of B:D)
+    let lastCatRow = -1;
+    for (let i = 0; i < allRows.length; i++) {
+      if (allRows[i] && (allRows[i][2] || '').toString().trim().toLowerCase() === catalogo.toLowerCase()) {
+        lastCatRow = i; // 0-based index in values array
+      }
+    }
+    if (lastCatRow >= 0) {
+      insertAfter = lastCatRow + 1; // 1-based sheet row
+    } else {
+      // Catalogo not found: insert after last data row
+      for (let i = allRows.length - 1; i >= 0; i--) {
+        if (allRows[i] && allRows[i][0] && allRows[i][0].toString().trim() !== '') {
+          insertAfter = i + 1; break;
+        }
+      }
+    }
+  } else {
+    // No catalogo hint: insert after last data row
+    for (let i = allRows.length - 1; i >= 0; i--) {
+      if (allRows[i] && allRows[i][0] && allRows[i][0].toString().trim() !== '') {
+        insertAfter = i + 1; break;
+      }
     }
   }
-  const insertAfter = Math.max(lastDataRow, 1); // at minimum after row 1 (header)
 
   const sheetId = await getSheetId(sheetName);
 
-  // Insert blank rows right after last data row
+  // Insert blank rows right after insertion point (inherit format from row above)
   await gapi.client.sheets.spreadsheets.batchUpdate({
     spreadsheetId: SHEET_ID,
     resource: {
       requests: [{
         insertDimension: {
           range: { sheetId, dimension: 'ROWS', startIndex: insertAfter, endIndex: insertAfter + rows.length },
-          inheritFromBefore: true // copy format from row above
+          inheritFromBefore: true
         }
       }]
     }
   });
 
-  // Write data into the newly inserted rows (B:K, leave A for checkbox)
+  // Write data (B:K, leave A for checkbox)
   const startRow = insertAfter + 1; // 1-based for range notation
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
@@ -1057,6 +1078,18 @@ function toast(msg, type='success') {
   t.innerHTML = `<span>${type==='success'?'✓':type==='info'?'ℹ':'✕'}</span> ${msg}`;
   c.appendChild(t);
   setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)}, 4000);
+}
+
+function setAltaFechaHoy() {
+  const el = document.getElementById('alta-fecha');
+  if (el && !el.value) {
+    const hoy = new Date();
+    const y = hoy.getFullYear();
+    const m = String(hoy.getMonth()+1).padStart(2,'0');
+    const d = String(hoy.getDate()).padStart(2,'0');
+    el.value = `${y}-${m}-${d}`;
+    updatePreview();
+  }
 }
 
 function renderAll() {
@@ -1258,7 +1291,7 @@ async function confirmarAlta() {
         '', '', temp, '', ''
       ]);
     }
-    await writeRowsToSheet(año, rows);
+    await writeRowsToSheet(año, rows, catalogo);
 
     if (esNueva) {
       toast(`✦ Hoja "${año}" creada — ${cantidad} insumo${cantidad>1?'s':''} registrado${cantidad>1?'s':''}`);
@@ -1278,9 +1311,12 @@ async function confirmarAlta() {
 }
 
 function limpiarAlta() {
-  ['alta-nombre','alta-catalogo','alta-lote','alta-fecha','alta-vencimiento'].forEach(id=>document.getElementById(id).value='');
+  ['alta-nombre','alta-catalogo','alta-lote','alta-vencimiento'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('alta-cantidad').value=1;
   document.getElementById('alta-temp').selectedIndex=0;
+  const el = document.getElementById('alta-fecha');
+  const hoy = new Date();
+  el.value = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
   updatePreview();
 }
 
@@ -1502,7 +1538,7 @@ function renderConsulta() {
   tbody.innerHTML=items.map(i=>{
     const e=getEstado(i), rc=e==='baja'?'row-baja':'row-disponible';
     const uso=i.inicioConsumo?(i.finConsumo?`${i.inicioConsumo} → ${i.finConsumo}`:`Desde ${i.inicioConsumo}`):'—';
-    return `<tr class="${rc}" data-id="${i.id}" onclick="toggleConsultaSelect(${i.id},this)">
+    return `<tr class="${rc}" data-id="${i.id}">
       <td>${i.nombre}</td><td><span class="mono">${i.catalogo}</span></td>
       <td><span class="lote-badge">${i.lote}</span></td><td>${yearBadge(getAnio(i))}</td>
       <td>${fmtFecha(i.fecha)}</td><td>${fmtFecha(i.vencimiento)}</td>
@@ -1514,17 +1550,17 @@ function renderConsulta() {
   updateConsultaActions();
 }
 
-let consultaSelected = new Set(); // ids seleccionados
+let consultaSelected = new Set();
+let consultaLastIdx   = null;
 
-function toggleConsultaSelect(id, tr) {
-  if (consultaSelected.has(id)) {
-    consultaSelected.delete(id);
-    tr.classList.remove('selected-row');
-  } else {
-    consultaSelected.add(id);
-    tr.classList.add('selected-row');
-  }
-  updateConsultaActions();
+function getConsultaRows() {
+  return [...document.querySelectorAll('#consulta-tbody tr[data-id]')];
+}
+
+function setRowSelected(tr, val) {
+  const id = parseInt(tr.dataset.id);
+  if (val) { consultaSelected.add(id);    tr.classList.add('selected-row'); }
+  else     { consultaSelected.delete(id); tr.classList.remove('selected-row'); }
 }
 
 function updateConsultaActions() {
@@ -1534,9 +1570,45 @@ function updateConsultaActions() {
   if (n === 0) { bar.classList.remove('show'); return; }
   bar.classList.add('show');
   lbl.textContent = `${n} insumo${n>1?'s':''} seleccionado${n>1?'s':''}`;
-  // Modificar solo disponible con 1 seleccionado
   document.querySelector('.btn-modificar').style.display = n === 1 ? '' : 'none';
 }
+
+// Attach Excel-like mousedown on the table body
+document.addEventListener('DOMContentLoaded', () => {
+  const tbody = document.getElementById('consulta-tbody');
+  if (!tbody) return;
+  tbody.addEventListener('mousedown', e => {
+    const tr = e.target.closest('tr[data-id]');
+    if (!tr) return;
+    e.preventDefault();
+    const rows = getConsultaRows();
+    const idx  = rows.indexOf(tr);
+    const id   = parseInt(tr.dataset.id);
+    if (e.shiftKey && consultaLastIdx !== null) {
+      const from = Math.min(consultaLastIdx, idx);
+      const to   = Math.max(consultaLastIdx, idx);
+      rows.forEach((r, i) => { if (i >= from && i <= to) setRowSelected(r, true); });
+    } else if (e.ctrlKey || e.metaKey) {
+      setRowSelected(tr, !consultaSelected.has(id));
+      consultaLastIdx = idx;
+    } else {
+      const onlyThis = consultaSelected.size === 1 && consultaSelected.has(id);
+      rows.forEach(r => setRowSelected(r, false));
+      if (!onlyThis) { setRowSelected(tr, true); consultaLastIdx = idx; }
+      else           { consultaLastIdx = null; }
+    }
+    updateConsultaActions();
+  });
+});
+
+// Click outside table deselects all
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#consulta-tbody') && !e.target.closest('.consulta-actions')) {
+    getConsultaRows().forEach(r => setRowSelected(r, false));
+    consultaLastIdx = null;
+    updateConsultaActions();
+  }
+});
 
 function abrirModalModificar() {
   if (consultaSelected.size !== 1) return;

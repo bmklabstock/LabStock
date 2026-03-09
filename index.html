@@ -668,7 +668,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 // ═══════════════════════════════════════════════════════════════
 const CLIENT_ID   = '1010719643686-t7mbbrm83gjar49odmbth8i5ct1bciof.apps.googleusercontent.com';
 const SHEET_ID    = '1Q32_j2Evi9KxpWoJqUHcRDs_xoQEMGUijTS5exgbXIY';
-const SCOPES      = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file profile email';
+const SCOPES      = 'https://www.googleapis.com/auth/spreadsheets email';
 const DISCOVERY   = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 
 // Columnas (B=1 en base-1, pero la API usa índice base-0 para columnas en batchUpdate)
@@ -1254,8 +1254,8 @@ function renderDashboard() {
   document.getElementById('dash-tbody').innerHTML = sorted.length
     ? sorted.map(i=>`<tr>
         <td>${fmtFecha(i.fecha)}</td><td>${yearBadge(getAnio(i))}</td>
-        <td>${i.nombre}</td><td><span class="mono">${i.catalogo}</span></td>
-        <td><span class="lote-badge">${i.lote}</span></td><td>${estadoBadge(i)}</td>
+        <td>${htmlEsc(i.nombre)}</td><td><span class="mono">${htmlEsc(i.catalogo)}</span></td>
+        <td><span class="lote-badge">${htmlEsc(i.lote)}</span></td><td>${estadoBadge(i)}</td>
       </tr>`).join('')
     : '<tr><td colspan="6" style="text-align:center;color:var(--dim);padding:32px">Sin datos</td></tr>';
 }
@@ -1483,11 +1483,11 @@ function buscarBaja() {
         <div class="insumo-row" id="row-${i.id}" onclick="selectBaja(${i.id})">
           <div class="insumo-row-icon">🧪</div>
           <div class="insumo-row-info">
-            <div class="insumo-row-name">${i.nombre}</div>
+            <div class="insumo-row-name">${htmlEsc(i.nombre)}</div>
             <div class="insumo-row-cols">
-              <div class="insumo-row-col"><span class="insumo-row-col-label">Catálogo</span><span class="insumo-row-col-val">${i.catalogo}</span></div>
+              <div class="insumo-row-col"><span class="insumo-row-col-label">Catálogo</span><span class="insumo-row-col-val">${htmlEsc(i.catalogo)}</span></div>
               <div class="insumo-row-divider"></div>
-              <div class="insumo-row-col"><span class="insumo-row-col-label">Lote</span><span class="insumo-row-col-val">${i.lote}</span></div>
+              <div class="insumo-row-col"><span class="insumo-row-col-label">Lote</span><span class="insumo-row-col-val">${htmlEsc(i.lote)}</span></div>
               <div class="insumo-row-divider"></div>
               <div class="insumo-row-col"><span class="insumo-row-col-label">Llegada</span><span class="insumo-row-col-val">${fmtFecha(i.fecha)}</span></div>
             </div>
@@ -1803,6 +1803,9 @@ async function guardarModificacion() {
     obs:           document.getElementById('me-obs').value.trim(),
   };
 
+  // Validar campo obligatorio antes de cerrar
+  if (!updates.fecha) { toast('La fecha de llegada es obligatoria', 'error'); return; }
+
   // NOW close modal
   cerrarModal();
   Object.assign(item, updates);
@@ -1965,8 +1968,6 @@ function processBarcodeCode(code) {
     stock.find(i => i.lote.toLowerCase() === codeLow) ||
     stock.find(i => i.catalogo.toLowerCase().includes(codeLow)) ||
     stock.find(i => i.nombre.toLowerCase().includes(codeLow));
-  const TEMPS_LIST = ['15°C a 30°C','2°C a 8°C','-30°C a -10°C','-25°C a -15°C','-80°C'];
-  const tempMap = Object.fromEntries(TEMPS_LIST.map((t,i)=>[t,i]));
   if (match) {
     document.getElementById('alta-nombre').value = match.nombre;
     document.getElementById('alta-catalogo').value = match.catalogo;

@@ -632,11 +632,18 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
       <div class="modal-field"><label>N° Catálogo</label><input id="me-catalogo" type="text"></div>
       <div class="modal-field"><label>N° Lote</label><input id="me-lote" type="text"></div>
       <div class="modal-field"><label>Fecha llegada</label><input id="me-fecha" type="date"></div>
-      <div class="modal-field"><label>Vencimiento</label><input id="me-venc" type="date"></div>
+      <div class="modal-field">
+          <label>Vencimiento</label>
+          <input id="me-venc" type="date">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);margin-top:4px;font-weight:400;cursor:pointer">
+            <input type="checkbox" id="me-venc-na" onchange="onModalVencNAChange()"> No posee fecha de vencimiento
+          </label>
+        </div>
       <div class="modal-field"><label>Temperatura</label>
-        <select id="me-temp">
-          <option>15°C a 30°C</option><option>2°C a 8°C</option><option>-30°C a -10°C</option><option>-25°C a -15°C</option><option>-80°C</option><option>Otra…</option>
+        <select id="me-temp" onchange="onMeTempChange()">
+          <option>15°C a 30°C</option><option>2°C a 8°C</option><option>-30°C a -10°C</option><option>-25°C a -15°C</option><option>-80°C</option><option value="otra">Otra…</option>
         </select>
+        <input type="text" class="temp-custom" id="me-temp-custom" placeholder="Ej: -196°C" style="margin-top:6px">
       </div>
       <div class="modal-field"><label>Inicio consumo</label><input id="me-inicio" type="date"></div>
       <div class="modal-field"><label>Fin consumo</label><input id="me-fin" type="date"></div>
@@ -1033,8 +1040,8 @@ async function ensureSheetExists(year) {
 // SHEETS API — WRITE (Baja — update specific row)
 // ═══════════════════════════════════════════════════════════════
 async function updateRowInSheet(item) {
-  // item.rowIndex is 1-based (data row, after header → actual sheet row = rowIndex + 1)
-  const sheetRow = item.rowIndex + 1; // +1 for header
+  // rowIndex is stored as rowIdx+1 where rowIdx skips the header → it IS the 1-based sheet row
+  const sheetRow = item.rowIndex;
   const range = `${item.sheetName}!G${sheetRow}:K${sheetRow}`;
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
@@ -1675,7 +1682,7 @@ function abrirModalModificar() {
   const i = stock.find(x => x.id === id);
   if (!i) return;
   const toInput = str => {
-    if (!str) return '';
+    if (!str || str.toUpperCase() === 'NA' || str === '—') return '';
     if (str.includes('/')) { const [d,m,y]=str.split('/'); return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
     return str;
   };
@@ -1683,8 +1690,18 @@ function abrirModalModificar() {
   document.getElementById('me-catalogo').value = i.catalogo;
   document.getElementById('me-lote').value = i.lote;
   document.getElementById('me-fecha').value = toInput(i.fecha);
-  document.getElementById('me-venc').value = toInput(i.vencimiento);
-  document.getElementById('me-temp').value = i.tempAlmacen;
+  const isVencNA = !i.vencimiento || i.vencimiento.toUpperCase()==='NA';
+  document.getElementById('me-venc').value = isVencNA ? '' : toInput(i.vencimiento);
+  document.getElementById('me-venc-na').checked = isVencNA;
+  document.getElementById('me-venc').disabled = isVencNA;
+  const TEMPS_MODAL = ['15°C a 30°C','2°C a 8°C','-30°C a -10°C','-25°C a -15°C','-80°C'];
+  const meTempSel = document.getElementById('me-temp');
+  const meTempCus = document.getElementById('me-temp-custom');
+  if (TEMPS_MODAL.includes(i.tempAlmacen)) {
+    meTempSel.value = i.tempAlmacen; meTempCus.classList.remove('show');
+  } else {
+    meTempSel.value = 'otra'; meTempCus.classList.add('show'); meTempCus.value = i.tempAlmacen;
+  }
   document.getElementById('me-inicio').value = toInput(i.inicioConsumo);
   document.getElementById('me-fin').value = toInput(i.finConsumo);
   document.getElementById('me-obs').value = i.obs;
@@ -1693,6 +1710,18 @@ function abrirModalModificar() {
 
 function cerrarModal() {
   document.getElementById('modal-edicion').style.display = 'none';
+}
+function onModalVencNAChange() {
+  const cb = document.getElementById('me-venc-na');
+  const inp = document.getElementById('me-venc');
+  inp.disabled = cb.checked;
+  if (cb.checked) inp.value = '';
+}
+function onMeTempChange() {
+  const sel = document.getElementById('me-temp');
+  const cus = document.getElementById('me-temp-custom');
+  if (sel.value === 'otra') { cus.classList.add('show'); cus.focus(); }
+  else cus.classList.remove('show');
 }
 
 async function guardarModificacion() {
@@ -1703,8 +1732,9 @@ async function guardarModificacion() {
   item.catalogo     = document.getElementById('me-catalogo').value.trim();
   item.lote         = document.getElementById('me-lote').value.trim();
   item.fecha        = toSheetDate(document.getElementById('me-fecha').value);
-  item.vencimiento  = toSheetDate(document.getElementById('me-venc').value);
-  item.tempAlmacen  = document.getElementById('me-temp').value;
+  item.vencimiento  = document.getElementById('me-venc-na').checked ? 'NA' : toSheetDate(document.getElementById('me-venc').value);
+  const meTempSelV = document.getElementById('me-temp').value;
+  item.tempAlmacen  = meTempSelV === 'otra' ? (document.getElementById('me-temp-custom').value.trim() || 'Otra') : meTempSelV;
   item.inicioConsumo= toSheetDate(document.getElementById('me-inicio').value);
   item.finConsumo   = toSheetDate(document.getElementById('me-fin').value);
   item.obs          = document.getElementById('me-obs').value.trim();
@@ -1712,7 +1742,7 @@ async function guardarModificacion() {
   const btn = document.querySelector('.btn-modificar');
   btn.textContent = 'Guardando…'; btn.disabled = true;
   try {
-    const sheetRow = item.rowIndex + 1;
+    const sheetRow = item.rowIndex; // rowIndex is already the 1-based sheet row
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: `${item.sheetName}!B${sheetRow}:K${sheetRow}`,
@@ -1724,6 +1754,7 @@ async function guardarModificacion() {
     });
     toast('✓ Insumo modificado correctamente', 'success');
     consultaSelected.clear();
+    updateConsultaActions();
     await syncFromSheets();
   } catch(e) {
     toast('Error al guardar: ' + (e.result?.error?.message || e.message), 'error');
@@ -1750,7 +1781,7 @@ Esta acción no se puede deshacer.`)) return;
     const bySheet = {};
     toDelete.forEach(i => {
       if (!bySheet[i.sheetName]) bySheet[i.sheetName] = [];
-      bySheet[i.sheetName].push(i.rowIndex + 1); // actual sheet row
+      bySheet[i.sheetName].push(i.rowIndex); // rowIndex is already 1-based sheet row
     });
     for (const [sheetName, rows] of Object.entries(bySheet)) {
       const sheetId = await getSheetId(sheetName);
@@ -1766,6 +1797,7 @@ Esta acción no se puede deshacer.`)) return;
     }
     toast(`🗑️ ${n} insumo${n>1?'s':''} eliminado${n>1?'s':''}`, 'success');
     consultaSelected.clear();
+    updateConsultaActions();
     await syncFromSheets();
   } catch(e) {
     toast('Error al eliminar: ' + (e.result?.error?.message || e.message), 'error');

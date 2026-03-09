@@ -472,11 +472,11 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
       <div class="field">
         <label>Temperatura de almacenamiento</label>
         <select id="alta-temp" onchange="updatePreview()">
-          <option value="Ambiente">Ambiente</option>
-          <option value="-20°C">-20°C</option>
-          <option value="-30 a -10">-30 a -10</option>
+          <option value="15°C a 30°C">15°C a 30°C</option>
+          <option value="2°C a 8°C">2°C a 8°C</option>
+          <option value="-30°C a -10°C">-30°C a -10°C</option>
+          <option value="-25°C a -15°C">-25°C a -15°C</option>
           <option value="-80°C">-80°C</option>
-          <option value="2 a 8°C">2 a 8°C (heladera)</option>
         </select>
       </div>
     </div>
@@ -625,7 +625,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
       <div class="modal-field"><label>Vencimiento</label><input id="me-venc" type="date"></div>
       <div class="modal-field"><label>Temperatura</label>
         <select id="me-temp">
-          <option>Ambiente</option><option>-20°C</option><option>-30 a -10</option><option>-80°C</option><option>2 a 8°C</option>
+          <option>15°C a 30°C</option><option>2°C a 8°C</option><option>-30°C a -10°C</option><option>-25°C a -15°C</option><option>-80°C</option>
         </select>
       </div>
       <div class="modal-field"><label>Inicio consumo</label><input id="me-inicio" type="date"></div>
@@ -1227,7 +1227,7 @@ function altaACSelect(field, idx) {
   if (tag) { tag.classList.add('show'); setTimeout(()=>tag.classList.remove('show'),3000); }
   flashFill('alta-'+field);
   const item = sug.item;
-  const tempMap = {'Ambiente':0,'-20°C':1,'-30 a -10':2,'-80°C':3,'2 a 8°C':4};
+  const tempMap = {'15°C a 30°C':0,'2°C a 8°C':1,'-30°C a -10°C':2,'-25°C a -15°C':3,'-80°C':4};
   // Always fill all related fields (overwrite if different insumo selected)
   const n = document.getElementById('alta-nombre');
   const c = document.getElementById('alta-catalogo');
@@ -1788,7 +1788,7 @@ function processBarcodeCode(code) {
     stock.find(i => i.lote.toLowerCase() === codeLow) ||
     stock.find(i => i.catalogo.toLowerCase().includes(codeLow)) ||
     stock.find(i => i.nombre.toLowerCase().includes(codeLow));
-  const tempMap = {'Ambiente':0,'-20°C':1,'-30 a -10':2,'-80°C':3,'2 a 8°C':4};
+  const tempMap = {'15°C a 30°C':0,'2°C a 8°C':1,'-30°C a -10°C':2,'-25°C a -15°C':3,'-80°C':4};
   if (match) {
     document.getElementById('alta-nombre').value = match.nombre;
     document.getElementById('alta-catalogo').value = match.catalogo;

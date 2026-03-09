@@ -1,2012 +1,351 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LabStock — Gestión de Insumos</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<title>LabStock Pro</title>
+
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#f2f1ed;--surface:#fff;--surface2:#f7f6f2;--border:#dddbd3;--border2:#edecea;
-  --text:#181814;--mid:#5c5c50;--dim:#9c9c88;
-  --accent:#6b3fa0;--accent-l:#f0eaf8;--accent-d:#52308a;
-  --red:#c0392b;--red-l:#fdf0ee;--amber:#c07800;--amber-l:#fdf6e3;
-  --blue:#1a4a8a;--blue-l:#eaf0fb;
-  --shadow:0 1px 3px rgba(0,0,0,.07),0 4px 12px rgba(0,0,0,.04);
-  --shadow-lg:0 8px 30px rgba(0,0,0,.12);
-}
-body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;font-size:14px}
-
-/* LOGIN */
-#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:0}
-#loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px}
-#loading-overlay .lo-logo{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--accent)}
-#loading-overlay .lo-spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
-.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;text-align:center;box-shadow:var(--shadow-lg);max-width:380px;width:100%}
-.login-logo{font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:600;color:var(--accent);letter-spacing:-1px;margin-bottom:6px}
-.login-sub{font-size:13px;color:var(--dim);margin-bottom:32px}
-.btn-google{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:12px 20px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:all .15s}
-.btn-google:hover{background:var(--surface2);border-color:var(--accent)}
-.btn-google svg{flex-shrink:0}
-.login-note{font-size:11px;color:var(--dim);margin-top:16px}
-#login-status{font-size:12px;color:var(--dim);margin-top:12px;min-height:18px}
-
-/* SHELL */
-.shell{display:flex;min-height:100vh}
-#app{display:none}
-
-/* SIDEBAR */
-.sidebar{width:230px;background:#120e1a;color:#b8bcb9;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh}
-.sidebar-brand{padding:24px 20px 20px;border-bottom:1px solid #261d33}
-.brand-label{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;color:#fff;letter-spacing:-0.5px}
-.brand-sub{font-size:11px;color:#5a6058;margin-top:2px;letter-spacing:.5px;text-transform:uppercase}
-.sidebar-nav{padding:16px 12px;flex:1}
-.nav-section-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#3a2e4a;padding:0 8px;margin:16px 0 6px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:6px;cursor:pointer;transition:all .15s;color:#8a9088;font-size:13px;font-weight:400;border:none;background:none;width:100%;text-align:left}
-.nav-item:hover{background:#1e1a23;color:#d0d4d1}
-.nav-item.active{background:#2d1f42;color:#b98ee8;font-weight:500}
-.nav-icon{width:18px;height:18px;flex-shrink:0;opacity:.7}
-.nav-item.active .nav-icon{opacity:1}
-.sidebar-footer{padding:16px 20px;border-top:1px solid #261d33}
-.user-chip{display:flex;align-items:center;gap:10px}
-.user-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0}
-.user-avatar-placeholder{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6b3fa0,#9b6dd0);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0}
-.user-name{font-size:12px;color:#c0bcc8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
-.user-email{font-size:10px;color:#4a4e4b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.btn-logout{margin-top:8px;width:100%;padding:6px;border:1px solid #261d33;border-radius:5px;background:none;color:#4a4e4b;font-size:11px;cursor:pointer;transition:all .15s;font-family:'IBM Plex Sans',sans-serif}
-.btn-logout:hover{background:#1e1a23;color:#8a8090}
-
-/* MAIN */
-.main{flex:1;overflow-x:hidden}
-.page{display:none;padding:32px 36px;animation:fadeIn .2s ease}
-.page.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.page-header{margin-bottom:28px;display:flex;align-items:flex-start;justify-content:space-between}
-.page-header-left{}
-.page-title{font-size:22px;font-weight:600;color:var(--text);letter-spacing:-.3px}
-.page-desc{font-size:13px;color:var(--mid);margin-top:4px}
-
-/* SYNC INDICATOR */
-.sync-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:12px;font-weight:500;color:var(--mid);cursor:pointer;transition:all .15s;font-family:'IBM Plex Sans',sans-serif}
-.sync-btn:hover{background:var(--surface2)}
-.sync-btn.syncing{color:var(--accent);border-color:var(--accent)}
-.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex-shrink:0}
-.sync-btn.syncing .sync-dot{background:var(--accent);animation:pulse-dot 1s infinite}
-.sync-btn.ok .sync-dot{background:#2ecc71}
-.sync-btn.error .sync-dot{background:var(--red)}
-@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
-
-/* CARDS */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;box-shadow:var(--shadow)}
-.card+.card{margin-top:16px}
-.card-title{font-size:13px;font-weight:600;color:var(--mid);text-transform:uppercase;letter-spacing:.8px;margin-bottom:18px;display:flex;align-items:center;gap:8px}
-.card-title::before{content:'';width:3px;height:14px;border-radius:2px;background:var(--accent);flex-shrink:0}
-
-/* FORM */
-.form-grid{display:grid;gap:16px}
-.form-grid.cols2{grid-template-columns:1fr 1fr}
-.form-grid.cols3{grid-template-columns:1fr 1fr 1fr}
-.field{display:flex;flex-direction:column;gap:5px}
-.field label{font-size:12px;font-weight:500;color:var(--mid);letter-spacing:.3px}
-.field input,.field select{padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none}
-.field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-l)}
-.field .hint{font-size:11px;color:var(--dim);margin-top:2px}
-.field-wrap{position:relative}
-
-/* ALTA AUTOCOMPLETE */
-.alta-ac-list{position:absolute;top:calc(100%+2px);left:0;right:0;background:var(--surface);border:1px solid var(--accent);border-radius:6px;box-shadow:var(--shadow-lg);z-index:200;display:none;max-height:200px;overflow-y:auto}
-.alta-ac-list.show{display:block}
-.alta-ac-item{padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border2);transition:background .1s}
-.alta-ac-item:last-child{border-bottom:none}
-.alta-ac-item:hover,.alta-ac-item:focus{background:var(--accent-l)}
-.alta-ac-item .ai-main{font-weight:500;color:var(--text)}
-.alta-ac-item .ai-sub{font-size:11px;color:var(--dim);margin-top:2px}
-.autofilled{border-color:var(--accent)!important;background:var(--accent-l)!important;transition:all .3s}
-.autofill-tag{font-size:10px;color:var(--accent);font-weight:600;letter-spacing:.3px;margin-top:3px;display:none}
-.autofill-tag.show{display:block}
-
-/* PREVIEW TABLE */
-.preview-table-wrap{overflow-x:auto}
-.preview-table{width:100%;border-collapse:collapse;font-size:13px}
-.preview-table th{background:var(--surface2);padding:8px 12px;text-align:left;font-weight:500;color:var(--mid);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border)}
-.preview-table td{padding:9px 12px;border-bottom:1px solid var(--border2);color:var(--text)}
-.preview-table tr:last-child td{border-bottom:none}
-.preview-row-new td{background:#f7f2fd}
-.lote-badge{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--blue-l);color:var(--blue);padding:2px 7px;border-radius:4px;font-weight:600}
-
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover:not(:disabled){background:var(--accent-d)}
-.btn-danger{background:var(--red);color:#fff}
-.btn-danger:hover:not(:disabled){background:#a93225}
-.btn-ghost{background:transparent;color:var(--mid);border:1px solid var(--border)}
-.btn-ghost:hover{background:var(--surface2);color:var(--text)}
-.btn-row{display:flex;gap:10px;margin-top:20px;align-items:center}
-
-/* BADGES */
-.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.3px}
-.badge::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.badge-disponible{background:var(--accent-l);color:var(--accent)}
-.badge-disponible::before{background:var(--accent)}
-.badge-baja{background:var(--red-l);color:var(--red)}
-.badge-baja::before{background:var(--red)}
-.badge-vence{background:var(--amber-l);color:var(--amber)}
-.badge-vence::before{background:var(--amber)}
-.badge-vencido{background:#2a1a1a;color:#e05050}
-.badge-vencido::before{background:#e05050}
-
-/* YEAR TABS */
-.year-tabs-bar{display:flex;align-items:center;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border);overflow-x:auto}
-.year-tab{padding:8px 18px;font-size:13px;font-weight:500;color:var(--dim);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
-.year-tab:hover{color:var(--text)}
-.year-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
-.year-tab .tab-count{font-size:10px;background:var(--surface2);color:var(--dim);padding:1px 6px;border-radius:10px}
-.year-tab.active .tab-count{background:var(--accent-l);color:var(--accent)}
-
-/* SEARCH */
-.search-wrap{position:relative;width:100%}
-.search-input{width:100%;padding:11px 14px 11px 40px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'IBM Plex Sans',sans-serif;outline:none;transition:all .15s;background:var(--surface)}
-.search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-l)}
-.search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--dim);pointer-events:none}
-.autocomplete-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg);z-index:100;max-height:240px;overflow-y:auto;display:none}
-.autocomplete-list.show{display:block}
-.autocomplete-item{padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border2);transition:background .1s}
-.autocomplete-item:last-child{border-bottom:none}
-.autocomplete-item:hover{background:var(--accent-l)}
-.autocomplete-item .ac-main{font-weight:500}
-.autocomplete-item .ac-sub{font-size:11px;color:var(--dim);margin-top:1px}
-.ac-highlight{color:var(--accent);font-weight:600}
-
-/* FILTER */
-.filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.filter-btn{padding:5px 13px;border-radius:20px;border:1px solid var(--border);background:var(--surface);font-size:12px;font-weight:500;color:var(--mid);cursor:pointer;transition:all .15s}
-.filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.filter-btn:hover:not(.active){background:var(--surface2)}
-
-/* TABLES */
-.results-table{width:100%;border-collapse:collapse;font-size:13px}
-.results-table th{background:var(--surface2);padding:9px 12px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--mid);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:1}
-.results-table td{padding:10px 12px;border-bottom:1px solid var(--border2);vertical-align:middle}
-.results-table tr.row-disponible:hover td{background:#f7f2fd}
-.results-table tr.row-baja td{opacity:.7}
-.results-table tr.row-baja:hover td{background:var(--red-l);opacity:1}
-.table-wrap{max-height:460px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
-.mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
-
-/* BAJA */
-.baja-results{margin-top:16px;display:none}
-.baja-results.show{display:block}
-.insumo-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;background:var(--surface);margin-bottom:8px}
-.insumo-row:hover{border-color:var(--accent);background:var(--accent-l)}
-.insumo-row.selected{border-color:var(--accent);background:var(--accent-l);box-shadow:0 0 0 3px rgba(107,63,160,.15)}
-.insumo-row-icon{width:36px;height:36px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
-.insumo-row-info{flex:1;display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;min-width:0}
-.insumo-row-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.insumo-row-cols{display:flex;gap:28px;align-items:center;flex-shrink:0}
-.insumo-row-col{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
-.insumo-row-col-label{font-size:11px;color:#4a2070;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-.insumo-row-col-val{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;color:var(--text)}
-.insumo-row-divider{width:1px;height:32px;background:var(--border)}
-.check-circle{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
-.insumo-row.selected .check-circle{border-color:var(--accent);background:var(--accent)}
-.check-icon{display:none;color:#fff;font-size:10px;font-weight:700}
-.insumo-row.selected .check-icon{display:block}
-.baja-form{display:none;margin-top:16px}
-.baja-form.show{display:block}
-.selected-tag{display:inline-flex;align-items:center;gap:8px;background:var(--accent-l);border:1px solid rgba(107,63,160,.2);color:var(--accent);padding:6px 12px;border-radius:6px;font-size:13px;font-weight:500;margin-bottom:16px}
-
-/* STATS */
-.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow)}
-.stat-value{font-size:28px;font-weight:600;letter-spacing:-1px;line-height:1}
-.stat-label{font-size:11px;color:var(--dim);margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
-.stat-card.purple .stat-value{color:var(--accent)}
-.stat-card.red .stat-value{color:var(--red)}
-.stat-card.amber .stat-value{color:var(--amber)}
-.stat-card.blue .stat-value{color:var(--blue)}
-
-/* TOAST */
-.toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
-.toast{display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);animation:toastIn .3s ease;max-width:360px}
-.toast-success{background:var(--accent);color:#fff}
-.toast-error{background:var(--red);color:#fff}
-.toast-info{background:#1a4a8a;color:#fff}
-.toast.out{animation:toastOut .3s ease forwards}
-@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateX(20px)}}
-
-/* MISC */
-.temp-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--amber-l);color:var(--amber);padding:2px 6px;border-radius:4px}
-.empty-state{text-align:center;padding:48px 24px;color:var(--dim)}
-.empty-state .es-icon{font-size:40px;margin-bottom:12px;display:block}
-.loading-row td{text-align:center;padding:32px;color:var(--dim)}
-.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-@media(max-width:768px){
-  .sidebar{display:none}
-  .page{padding:20px 16px}
-  .form-grid.cols2,.form-grid.cols3{grid-template-columns:1fr}
-  .stats-row{grid-template-columns:1fr 1fr}
+body{
+font-family: Arial, sans-serif;
+margin:0;
+background:#f4f6f8;
 }
 
-/* CONSULTA SELECCIÓN */
-.results-table tbody tr{cursor:pointer;transition:background .1s}
-.results-table tbody tr.selected-row{background:#f0eaf8 !important;outline:2px solid var(--accent);outline-offset:-2px}
-.consulta-actions{display:none;margin-top:12px;gap:10px;align-items:center}
-.consulta-actions.show{display:flex}
-.consulta-sel-count{font-size:13px;color:var(--mid);flex:1}
-.btn-modificar{padding:9px 18px;background:var(--accent-l);border:1.5px solid rgba(107,63,160,.3);border-radius:7px;color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .15s}
-.btn-modificar:hover{background:#e4d6f7;border-color:var(--accent)}
-.btn-eliminar{padding:9px 18px;background:#fff0f0;border:1.5px solid rgba(200,40,40,.3);border-radius:7px;color:#c02828;font-weight:600;font-size:13px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .15s}
-.btn-eliminar:hover{background:#ffe0e0;border-color:#c02828}
-/* Modal edición */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px 32px;max-width:520px;width:100%;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto}
-.modal-title{font-size:16px;font-weight:600;margin-bottom:20px;color:var(--text)}
-.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.modal-field{display:flex;flex-direction:column;gap:4px}
-.modal-field label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-.modal-field input,.modal-field select{padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;background:var(--surface);color:var(--text);outline:none}
-.modal-field input:focus,.modal-field select:focus{border-color:var(--accent)}
-.modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+header{
+background:#1f2937;
+color:white;
+padding:15px;
+font-size:20px;
+}
 
-.temp-row{display:flex;gap:8px;align-items:stretch}
-.temp-row select{flex:1}
-.temp-custom{flex:1;padding:9px 12px;border:1.5px solid var(--accent);border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--text);background:var(--accent-l);outline:none;display:none;transition:all .15s}
-.temp-custom.show{display:block}
+.container{
+padding:20px;
+max-width:1100px;
+margin:auto;
+}
 
-/* BARCODE SCANNER */
-.barcode-panel{background:linear-gradient(135deg,#1e1228,#2d1f42);border:1.5px solid rgba(155,109,208,.3);border-radius:10px;padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px}
-.barcode-icon-wrap{width:44px;height:44px;background:rgba(107,63,160,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.barcode-panel-body{flex:1;min-width:0}
-.barcode-panel-title{font-size:12px;font-weight:600;color:#c8a8f0;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
-.barcode-input-row{display:flex;gap:8px}
-.barcode-input{flex:1;padding:9px 14px;background:rgba(255,255,255,.07);border:1.5px solid rgba(155,109,208,.3);border-radius:7px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:#e8d8ff;outline:none;transition:all .2s}
-.barcode-input::placeholder{font-family:'IBM Plex Sans',sans-serif;font-weight:400;font-size:13px;color:rgba(200,168,240,.4)}
-.barcode-input:focus{border-color:rgba(155,109,208,.8);background:rgba(255,255,255,.1);box-shadow:0 0 0 3px rgba(107,63,160,.2)}
-.barcode-input.flash{border-color:#b98ee8;animation:barcode-glow .4s ease}
-@keyframes barcode-glow{0%{box-shadow:0 0 0 0 rgba(185,142,232,.8)}100%{box-shadow:0 0 0 8px rgba(185,142,232,0)}}
-.barcode-status{font-size:11px;margin-top:5px;min-height:16px}
-.barcode-status.idle{color:rgba(200,168,240,.4)}
-.barcode-status.found{color:#7ee8a2}
-.barcode-status.notfound{color:#f0a0a0}
-.barcode-btn-clear{padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(155,109,208,.2);border-radius:6px;color:rgba(200,168,240,.6);font-size:12px;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'IBM Plex Sans',sans-serif}
-.barcode-btn-clear:hover{background:rgba(255,255,255,.1);color:#c8a8f0}
-.barcode-pulse{width:8px;height:8px;border-radius:50%;background:#7ee8a2;flex-shrink:0;animation:bp 1.5s infinite}
-@keyframes bp{0%,100%{opacity:1}50%{opacity:.3}}
+input,button,select{
+padding:8px;
+margin:4px;
+}
 
-.results-table th[onclick]:hover{background:var(--accent-l);color:var(--accent)}
+button{
+cursor:pointer;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+background:white;
+}
+
+th,td{
+padding:8px;
+border:1px solid #ddd;
+text-align:left;
+}
+
+th{
+background:#e5e7eb;
+}
+
+.expired{
+background:#f87171;
+color:white;
+}
+
+.warning{
+background:#fde68a;
+}
+
+#scanner{
+width:100%;
+max-width:400px;
+margin-top:10px;
+}
+
+.hidden{
+display:none;
+}
 </style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+
 </head>
+
 <body>
 
-<!-- LOGIN SCREEN -->
-<div id="login-screen">
-  <div class="login-box">
-    <div class="login-logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;margin-right:4px">
-  <path d="M6 3 C6 3 8 6 12 8 C16 10 18 13 18 13" stroke="#6b3fa0" stroke-width="2" stroke-linecap="round"/>
-  <path d="M18 3 C18 3 16 6 12 8 C8 10 6 13 6 13" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
-  <path d="M6 13 C6 13 8 16 12 18 C16 20 18 23 18 23" stroke="#6b3fa0" stroke-width="2" stroke-linecap="round"/>
-  <path d="M18 13 C18 13 16 16 12 18 C8 20 6 23 6 23" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="7.5" y1="7.2" x2="16.5" y2="9.8" stroke="#6b3fa0" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="7.5" y1="10.5" x2="16.5" y2="13" stroke="#6b3fa0" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="7.5" y1="16.2" x2="16.5" y2="18.8" stroke="#6b3fa0" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-</svg> LabStock</div>
-    <div class="login-sub">Gestión de Insumos de Laboratorio</div>
-    <button class="btn-google" onclick="handleLogin()">
-      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-      Iniciar sesión con Google
-    </button>
-    <div class="login-note">Solo usuarios autorizados del laboratorio</div>
-    <div id="login-status"></div>
-  </div>
+<header>LabStock Pro</header>
+
+<div class="container">
+
+<div id="login">
+<h3>Login</h3>
+<select id="role">
+<option value="operator">Operador</option>
+<option value="admin">Admin</option>
+</select>
+
+<input type="password" id="password" placeholder="Contraseña admin">
+<button onclick="login()">Entrar</button>
 </div>
 
-<!-- LOADING OVERLAY (visible durante auto-login silencioso) -->
-<div id="loading-overlay" style="display:none">
-  <div class="lo-logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;margin-right:4px">
-  <path d="M6 3 C6 3 8 6 12 8 C16 10 18 13 18 13" stroke="#6b3fa0" stroke-width="2" stroke-linecap="round"/>
-  <path d="M18 3 C18 3 16 6 12 8 C8 10 6 13 6 13" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
-  <path d="M6 13 C6 13 8 16 12 18 C16 20 18 23 18 23" stroke="#6b3fa0" stroke-width="2" stroke-linecap="round"/>
-  <path d="M18 13 C18 13 16 16 12 18 C8 20 6 23 6 23" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="7.5" y1="7.2" x2="16.5" y2="9.8" stroke="#6b3fa0" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="7.5" y1="10.5" x2="16.5" y2="13" stroke="#6b3fa0" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="7.5" y1="16.2" x2="16.5" y2="18.8" stroke="#6b3fa0" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-</svg> LabStock</div>
-  <div class="lo-spinner"></div>
+<div id="app" class="hidden">
+
+<h3>Agregar producto</h3>
+
+<input id="nombre" placeholder="Nombre">
+<input id="catalogo" placeholder="Catálogo / Código">
+<input id="lote" placeholder="Lote">
+<input id="vencimiento" type="date">
+<input id="temp" placeholder="Temperatura">
+<input id="obs" placeholder="Observaciones">
+
+<button onclick="agregar()">Agregar</button>
+
+<h3>Escanear código</h3>
+
+<button onclick="iniciarScanner()">Iniciar cámara</button>
+
+<div id="scanner"></div>
+
+<h3>Buscar</h3>
+
+<input id="buscar" placeholder="Buscar cualquier dato..." oninput="render()">
+
+<h3>Stock</h3>
+
+<table>
+<thead>
+<tr>
+<th>Nombre</th>
+<th>Catálogo</th>
+<th>Lote</th>
+<th>Vencimiento</th>
+<th>Temp</th>
+<th>Obs</th>
+<th>Acción</th>
+</tr>
+</thead>
+
+<tbody id="tabla"></tbody>
+</table>
+
+<h3>Historial</h3>
+
+<table>
+<thead>
+<tr>
+<th>Fecha</th>
+<th>Acción</th>
+<th>Producto</th>
+</tr>
+</thead>
+
+<tbody id="historial"></tbody>
+</table>
+
 </div>
 
-<!-- APP -->
-<div id="app">
-<div class="shell">
-
-<!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="sidebar-brand">
-    <div class="brand-label"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;margin-right:4px">
-  <path d="M6 3 C6 3 8 6 12 8 C16 10 18 13 18 13" stroke="#6b3fa0" stroke-width="2" stroke-linecap="round"/>
-  <path d="M18 3 C18 3 16 6 12 8 C8 10 6 13 6 13" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
-  <path d="M6 13 C6 13 8 16 12 18 C16 20 18 23 18 23" stroke="#6b3fa0" stroke-width="2" stroke-linecap="round"/>
-  <path d="M18 13 C18 13 16 16 12 18 C8 20 6 23 6 23" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="7.5" y1="7.2" x2="16.5" y2="9.8" stroke="#6b3fa0" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="7.5" y1="10.5" x2="16.5" y2="13" stroke="#6b3fa0" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="7.5" y1="16.2" x2="16.5" y2="18.8" stroke="#6b3fa0" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-</svg> LabStock</div>
-    <div class="brand-sub">Gestión de Insumos</div>
-  </div>
-  <nav class="sidebar-nav">
-    <div class="nav-section-label">Módulos</div>
-    <button class="nav-item active" onclick="showPage('dashboard')">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      Dashboard
-    </button>
-    <button class="nav-item" onclick="showPage('alta')">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      Alta de Insumos
-    </button>
-    <button class="nav-item" onclick="showPage('baja')">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      Baja de Insumos
-    </button>
-    <button class="nav-item" onclick="showPage('consultas')">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      Consultas
-    </button>
-  </nav>
-  <div class="sidebar-footer">
-    <div class="user-chip">
-      <div id="user-avatar-wrap"></div>
-      <div style="min-width:0">
-        <div class="user-name" id="user-name">—</div>
-        <div class="user-email" id="user-email">—</div>
-      </div>
-    </div>
-    <button class="btn-logout" onclick="handleLogout()">Cerrar sesión</button>
-  </div>
-</aside>
-
-<main class="main">
-
-<!-- DASHBOARD -->
-<div class="page active" id="page-dashboard">
-  <div class="page-header">
-    <div class="page-header-left">
-      <div class="page-title">Dashboard</div>
-      <div class="page-desc">Resumen del stock — conectado a <span class="sheet-title-ref">Google Sheets</span></div>
-    </div>
-    <button class="sync-btn" id="sync-btn" onclick="syncFromSheets()">
-      <span class="sync-dot"></span>
-      <span id="sync-label">Sincronizar</span>
-    </button>
-  </div>
-  <div id="dash-year-tabs" class="year-tabs-bar"></div>
-  <div class="stats-row">
-    <div class="stat-card blue"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total insumos</div></div>
-    <div class="stat-card purple"><div class="stat-value" id="stat-disp">—</div><div class="stat-label">Disponibles</div></div>
-    <div class="stat-card red"><div class="stat-value" id="stat-baja">—</div><div class="stat-label">Dados de baja</div></div>
-    <div class="stat-card amber"><div class="stat-value" id="stat-vence">—</div><div class="stat-label">Por vencer</div></div>
-    <div class="stat-card red"><div class="stat-value" id="stat-vencido">—</div><div class="stat-label">Vencidos</div></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Últimos movimientos</div>
-    <div class="table-wrap">
-      <table class="results-table">
-        <thead><tr><th>Fecha</th><th>Hoja</th><th>Insumo</th><th>N° Catálogo</th><th>N° Lote</th><th>Estado</th></tr></thead>
-        <tbody id="dash-tbody"><tr class="loading-row"><td colspan="6"><span class="spinner"></span>Cargando desde Google Sheets…</td></tr></tbody>
-      </table>
-    </div>
-  </div>
 </div>
-
-<!-- ALTA -->
-<div class="page" id="page-alta">
-  <div class="page-header">
-    <div class="page-header-left">
-      <div class="page-title">Alta de Insumos</div>
-      <div class="page-desc">Los datos se escribirán directamente en la hoja del año correspondiente.</div>
-    </div>
-  </div>
-  <div class="barcode-panel">
-    <div class="barcode-icon-wrap">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b98ee8" stroke-width="1.8">
-        <path d="M3 9V5a2 2 0 012-2h4M3 15v4a2 2 0 002 2h4M21 9V5a2 2 0 00-2-2h-4M21 15v4a2 2 0 01-2 2h-4"/>
-        <line x1="7" y1="4" x2="7" y2="20"/><line x1="10" y1="4" x2="10" y2="20"/>
-        <line x1="13" y1="4" x2="13" y2="20"/><line x1="16" y1="4" x2="16" y2="20"/>
-      </svg>
-    </div>
-    <div class="barcode-panel-body">
-      <div class="barcode-panel-title"><span class="barcode-pulse"></span> Lector de codigo de barras / QR</div>
-      <div class="barcode-input-row">
-        <input type="text" class="barcode-input" id="barcode-input"
-          placeholder="Escana el codigo o escribilo manualmente..."
-          oninput="onBarcodeInput()" onkeydown="onBarcodeKey(event)"
-          autocomplete="off" spellcheck="false">
-        <button class="barcode-btn-clear" onclick="clearBarcode()">Limpiar</button>
-      </div>
-      <div class="barcode-status idle" id="barcode-status">Listo - escana un codigo para autocompletar</div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Datos del insumo</div>
-    <div class="form-grid cols2">
-      <div class="field">
-        <label>Nombre del insumo</label>
-        <div class="field-wrap">
-          <input type="text" id="alta-nombre" placeholder="Ej: 2X Oncomine Focus DNA Assay" oninput="altaAC('nombre')" autocomplete="off">
-          <div class="alta-ac-list" id="ac-nombre"></div>
-        </div>
-        <span class="autofill-tag" id="tag-nombre">✦ Autocompletado desde stock</span>
-      </div>
-      <div class="field">
-        <label>N° Catálogo</label>
-        <div class="field-wrap">
-          <input type="text" id="alta-catalogo" placeholder="Ej: A42006" oninput="altaAC('catalogo')" autocomplete="off">
-          <div class="alta-ac-list" id="ac-catalogo"></div>
-        </div>
-        <span class="autofill-tag" id="tag-catalogo">✦ Autocompletado desde stock</span>
-      </div>
-      <div class="field">
-        <label>N° Lote (base)</label>
-        <div class="field-wrap">
-          <input type="text" id="alta-lote" placeholder="Ej: 2409037" oninput="altaAC('lote')" autocomplete="off">
-          <div class="alta-ac-list" id="ac-lote"></div>
-        </div>
-        <span class="hint">Se agregará A, B, C… (o AA, AB… si hay más de 27)</span>
-        <span class="autofill-tag" id="tag-lote">✦ Autocompletado desde stock</span>
-      </div>
-      <div class="field">
-        <label>Cantidad de unidades</label>
-        <input type="number" id="alta-cantidad" min="1" value="1" oninput="updatePreview()">
-      </div>
-      <div class="field">
-        <label>Fecha de llegada</label>
-        <input type="date" id="alta-fecha" oninput="updatePreview()">
-      </div>
-      <div class="field">
-        <label>Fecha de vencimiento</label>
-        <input type="date" id="alta-vencimiento" oninput="updatePreview(); document.getElementById('chk-sin-venc').checked=false;">
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mid);margin-top:6px;cursor:pointer;font-weight:400">
-          <input type="checkbox" id="chk-sin-venc" onchange="toggleSinVenc(this)" style="accent-color:var(--accent)">
-          No posee fecha de vencimiento
-        </label>
-      </div>
-      <div class="field">
-        <label>Temperatura de almacenamiento</label>
-        <div class="temp-row">
-          <select id="alta-temp" onchange="onAltaTempChange()">
-            <option value="15°C a 30°C">15°C a 30°C</option>
-            <option value="2°C a 8°C">2°C a 8°C</option>
-            <option value="-30°C a -10°C">-30°C a -10°C</option>
-            <option value="-25°C a -15°C">-25°C a -15°C</option>
-            <option value="-80°C">-80°C</option>
-            <option value="otra">Otra…</option>
-          </select>
-          <input type="text" class="temp-custom" id="temp-custom" placeholder="Ej: -196°C">
-        </div>
-        <span class="autofill-tag" id="tag-temp" style="display:none">❆ Temperatura inferida por mayoría de registros, comprobar si es la correcta</span>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Vista previa — filas que se escribirán en Sheets</div>
-    <div class="preview-table-wrap">
-      <table class="preview-table">
-        <thead><tr><th>Fecha llegada</th><th>Insumo</th><th>N° Catálogo</th><th>N° Lote</th><th>Vencimiento</th><th>Temp.</th><th>Hoja (año)</th></tr></thead>
-        <tbody id="preview-tbody">
-          <tr><td colspan="7" style="text-align:center;color:var(--dim);padding:24px">Completá los datos para ver la vista previa</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" id="btn-confirmar-alta" onclick="confirmarAlta()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        Confirmar alta en Sheets
-      </button>
-      <button class="btn btn-ghost" onclick="limpiarAlta()">Limpiar</button>
-    </div>
-  </div>
-</div>
-
-<!-- BAJA -->
-<div class="page" id="page-baja">
-  <div class="page-header">
-    <div class="page-header-left">
-      <div class="page-title">Baja de Insumos</div>
-      <div class="page-desc">Buscá un insumo y registrá las fechas de uso. Se actualizará en <span class="sheet-title-ref">Google Sheets</span>.</div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Búsqueda</div>
-    <div class="form-grid cols3">
-      <div class="field">
-        <label>Tipo de búsqueda</label>
-        <select id="baja-tipo" onchange="onBajaTipoChange()">
-          <option value="nombre">Por nombre</option>
-          <option value="catalogo">Por N° Catálogo</option>
-          <option value="lote">Por N° Lote</option>
-          <option value="fecha">Por fecha de llegada</option>
-        </select>
-      </div>
-      <div class="field" id="baja-text-wrap">
-        <label id="baja-search-label">Término de búsqueda</label>
-        <input type="text" id="baja-search-input" placeholder="Escribí para buscar…" oninput="buscarBaja()">
-      </div>
-      <div class="field" id="baja-date-wrap" style="display:none">
-        <label>Fecha de llegada</label>
-        <input type="date" id="baja-search-date" onchange="buscarBaja()">
-      </div>
-    </div>
-    <div id="baja-results" class="baja-results">
-      <div id="baja-list"></div>
-    </div>
-  </div>
-  <div class="card baja-form" id="baja-form-card">
-    <div class="card-title">Registrar uso</div>
-    <div id="baja-selected-tag"></div>
-    <div class="form-grid cols2">
-      <div class="field">
-        <label>Fecha de inicio de uso</label>
-        <input type="date" id="baja-inicio">
-      </div>
-      <div class="field">
-        <label>Fecha de fin de uso</label>
-        <input type="date" id="baja-fin">
-        <span class="hint">Dejar vacío si sigue en uso</span>
-      </div>
-      <div class="field">
-        <label>Rendimiento (opcional)</label>
-        <input type="text" id="baja-rendimiento" placeholder="Ej: 80%, 32 reacciones…">
-      </div>
-      <div class="field">
-        <label>Observaciones (opcional)</label>
-        <input type="text" id="baja-obs" placeholder="Notas adicionales">
-      </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-danger" id="btn-confirmar-baja" onclick="confirmarBaja()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        Confirmar baja en Sheets
-      </button>
-      <button class="btn btn-ghost" onclick="cancelarBaja()">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- CONSULTAS -->
-<div class="page" id="page-consultas">
-  <div class="page-header">
-    <div class="page-header-left">
-      <div class="page-title">Consultas</div>
-      <div class="page-desc">Todos los años incluidos por defecto.</div>
-    </div>
-  </div>
-  <div class="card">
-    <div id="consulta-year-tabs" class="year-tabs-bar"></div>
-    <div class="search-wrap" style="margin-bottom:16px">
-      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" class="search-input" id="consulta-input" placeholder="Buscar por nombre, catálogo o lote…" oninput="buscarConsulta()" autocomplete="off">
-      <div class="autocomplete-list" id="ac-list"></div>
-    </div>
-    <div class="filter-row">
-      <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
-      <button class="filter-btn" onclick="setFilter('disponible',this)">🟣 Disponibles</button>
-      <button class="filter-btn" onclick="setFilter('baja',this)">🔴 Dados de baja</button>
-      <button class="filter-btn" onclick="setFilter('vence',this)">🟡 Por vencer</button>
-      <button class="filter-btn" onclick="setFilter('vencido',this)">⚠️ Vencidos</button>
-    </div>
-    <div class="table-wrap">
-      <table class="results-table">
-        <thead><tr id="consulta-thead">
-          <th onclick="sortConsulta('nombre')" style="cursor:pointer;user-select:none">Insumo <span id="sort-nombre"></span></th>
-          <th onclick="sortConsulta('catalogo')" style="cursor:pointer;user-select:none">N° Catálogo <span id="sort-catalogo"></span></th>
-          <th>N° Lote</th>
-          <th onclick="sortConsulta('anio')" style="cursor:pointer;user-select:none">Hoja <span id="sort-anio"></span></th>
-          <th onclick="sortConsulta('fecha')" style="cursor:pointer;user-select:none">Llegada <span id="sort-fecha"></span></th>
-          <th onclick="sortConsulta('vencimiento')" style="cursor:pointer;user-select:none">Vencimiento <span id="sort-vencimiento"></span></th>
-          <th>Temp.</th>
-          <th onclick="sortConsulta('estado')" style="cursor:pointer;user-select:none">Estado <span id="sort-estado"></span></th>
-          <th>Período de uso</th>
-        </tr></thead>
-        <tbody id="consulta-tbody"></tbody>
-      </table>
-    </div>
-    <div style="margin-top:10px;font-size:12px;color:var(--dim)" id="consulta-count"></div>
-    <div class="consulta-actions" id="consulta-actions">
-      <span class="consulta-sel-count" id="consulta-sel-count"></span>
-      <button class="btn-modificar" onclick="abrirModalModificar()">✏️ Modificar</button>
-      <button class="btn-eliminar" onclick="confirmarEliminar()">🗑️ Eliminar seleccionados</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL EDICIÓN -->
-<div class="modal-overlay" id="modal-edicion" style="display:none" onclick="if(event.target===this)cerrarModal()">
-  <div class="modal-box">
-    <div class="modal-title">✏️ Modificar insumo</div>
-    <div class="modal-grid">
-      <div class="modal-field" style="grid-column:1/-1"><label>Nombre</label><input id="me-nombre" type="text"></div>
-      <div class="modal-field"><label>N° Catálogo</label><input id="me-catalogo" type="text"></div>
-      <div class="modal-field"><label>N° Lote</label><input id="me-lote" type="text"></div>
-      <div class="modal-field"><label>Fecha llegada</label><input id="me-fecha" type="date"></div>
-      <div class="modal-field">
-          <label>Vencimiento</label>
-          <input id="me-venc" type="date">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);margin-top:4px;font-weight:400;cursor:pointer">
-            <input type="checkbox" id="me-venc-na" onchange="onModalVencNAChange()"> No posee fecha de vencimiento
-          </label>
-        </div>
-      <div class="modal-field"><label>Temperatura</label>
-        <select id="me-temp" onchange="onMeTempChange()">
-          <option>15°C a 30°C</option><option>2°C a 8°C</option><option>-30°C a -10°C</option><option>-25°C a -15°C</option><option>-80°C</option><option value="otra">Otra…</option>
-        </select>
-        <input type="text" class="temp-custom" id="me-temp-custom" placeholder="Ej: -196°C" style="margin-top:6px">
-      </div>
-      <div class="modal-field"><label>Inicio consumo</label><input id="me-inicio" type="date"></div>
-      <div class="modal-field"><label>Fin consumo</label><input id="me-fin" type="date"></div>
-      <div class="modal-field" style="grid-column:1/-1"><label>Observaciones</label><input id="me-obs" type="text"></div>
-    </div>
-    <div class="modal-btns">
-      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarModificacion()">Guardar cambios</button>
-    </div>
-  </div>
-</div>
-
-</main>
-</div>
-</div>
-
-<div class="toast-container" id="toast-container"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════════════════════════
-const CLIENT_ID   = '1010719643686-t7mbbrm83gjar49odmbth8i5ct1bciof.apps.googleusercontent.com';
-const SHEET_ID    = '1Q32_j2Evi9KxpWoJqUHcRDs_xoQEMGUijTS5exgbXIY';
-const SCOPES      = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file profile email';
-const DISCOVERY   = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
-
-// Columnas (B=1 en base-1, pero la API usa índice base-0 para columnas en batchUpdate)
-// Fila: [checkbox(A), fecha(B), nombre(C), catalogo(D), lote(E), vencimiento(F),
-//        inicioConsumo(G), finConsumo(H), tempAlmacen(I), rendimiento(J), obs(K)]
-// Cuando leemos con range "Año!B:K" → índices 0..9
-// COL se construye dinámicamente leyendo el header de cada hoja (ver buildColMap)
-// Fallback a índices fijos si no se encuentra el header
-const COL_DEFAULTS = { fecha:0, nombre:1, catalogo:2, lote:3, vencimiento:4,
-                       inicioConsumo:5, finConsumo:6, tempAlmacen:7, rendimiento:8, obs:9 };
-
-// Nombres de columna aceptados (variantes posibles en la planilla)
-const COL_NAMES = {
-  fecha:        ['fecha llegada','fecha','llegada','date'],
-  nombre:       ['nombre','insumo','nombre del insumo','producto'],
-  catalogo:     ['n° catálogo','catalogo','catálogo','n° catalogo','catalog','cat'],
-  lote:         ['n° lote','lote','lot','batch','n° lote'],
-  vencimiento:  ['vencimiento','vence','expiry','exp','fecha vencimiento'],
-  inicioConsumo:['inicio consumo','inicio','start'],
-  finConsumo:   ['fin consumo','fin','baja','end'],
-  tempAlmacen:  ['temp.','temperatura','temp','almacenamiento','temperatura almacenamiento'],
-  rendimiento:  ['rendimiento','rend','yield'],
-  obs:          ['observaciones','obs','notas','notes'],
-};
-
-function buildColMap(headerRow) {
-  if (!headerRow) return COL_DEFAULTS;
-  const map = { ...COL_DEFAULTS };
-  const normalized = headerRow.map(h => (h||'').toString().toLowerCase().trim());
-  for (const [field, aliases] of Object.entries(COL_NAMES)) {
-    for (const alias of aliases) {
-      const idx = normalized.findIndex(h => h.includes(alias));
-      if (idx >= 0) { map[field] = idx; break; }
-    }
-  }
-  return map;
-}
 
-// ═══════════════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════════════
-let stock         = [];       // [{id, sheetName, rowIndex, fecha, nombre, ...}]
-let sheetNames    = [];       // ['2024','2025',...]
-let nextLocalId   = 1;
-let bajaSelectedId = null;
-let consultaFilter = 'todos';
-let consultaQuery  = '';
-let consultaSort   = { col: 'fecha', dir: 'desc' }; // columna y dirección de ordenamiento
-let dashYear       = 'todos';
-let consultaYear   = 'todos'; // se actualiza al año más reciente al cargar
-const altaSugs     = {nombre:[], catalogo:[], lote:[]};
-let tokenClient;
-let gapiReady = false;
-let gisReady  = false;
-
-// ═══════════════════════════════════════════════════════════════
-// GOOGLE IDENTITY / AUTH
-// ═══════════════════════════════════════════════════════════════
-function gapiLoaded() {
-  gapi.load('client', async () => {
-    await gapi.client.init({ discoveryDocs: [DISCOVERY] });
-    gapiReady = true;
-    maybeReady();
-  });
-}
+let stock = JSON.parse(localStorage.getItem("labstock_stock") || "[]")
+let historial = JSON.parse(localStorage.getItem("labstock_historial") || "[]")
+let userRole = "operator"
 
-function gisLoaded() {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: async (resp) => {
-      if (resp.error) {
-        document.getElementById('loading-overlay').style.display = 'none';
-        document.getElementById('login-screen').style.display = 'flex';
-        setLoginStatus('Hacé clic para ingresar', false);
-        return;
-      }
-      saveToken(resp);
-      gapi.client.setToken({ access_token: resp.access_token });
-      await afterLogin();
-    }
-  });
-  gisReady = true;
-  maybeReady();
+function guardar(){
+localStorage.setItem("labstock_stock", JSON.stringify(stock))
+localStorage.setItem("labstock_historial", JSON.stringify(historial))
 }
 
-// Token en sessionStorage: persiste en F5 pero no al cerrar la pestaña
-const SS_TOKEN = 'labstock_token';
-const LS_HINT  = 'labstock_hint';
-
-function saveToken(resp) {
-  try {
-    const exp = Date.now() + (resp.expires_in || 3600) * 1000 - 60000;
-    sessionStorage.setItem(SS_TOKEN, JSON.stringify({ access_token: resp.access_token, exp }));
-  } catch(e) {}
-}
-function loadToken() {
-  try {
-    const raw = sessionStorage.getItem(SS_TOKEN);
-    if (!raw) return null;
-    const t = JSON.parse(raw);
-    if (Date.now() > t.exp) { sessionStorage.removeItem(SS_TOKEN); return null; }
-    return t;
-  } catch(e) { return null; }
-}
-function clearToken() { try { sessionStorage.removeItem(SS_TOKEN); } catch(e) {} }
-
-function saveHint(email) { try { localStorage.setItem(LS_HINT, email); } catch(e) {} }
-function loadHint() { try { return localStorage.getItem(LS_HINT) || ''; } catch(e) { return ''; } }
-function clearHint() { try { localStorage.removeItem(LS_HINT); } catch(e) {} }
-
-function maybeReady() {
-  if (!gapiReady || !gisReady) return;
-  const saved = loadToken();
-  if (saved) {
-    // Token válido en esta sesión (F5): entrar directo, sin ningún popup
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('loading-overlay').style.display = 'flex';
-    gapi.client.setToken({ access_token: saved.access_token });
-    afterLogin();
-  } else {
-    const hint = loadHint();
-    if (hint) {
-      // Nueva pestaña con cuenta conocida: login silencioso (1 popup breve)
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('loading-overlay').style.display = 'flex';
-      tokenClient.requestAccessToken({ prompt: '', login_hint: hint });
-    } else {
-      document.getElementById('login-status').textContent = 'Listo para conectar';
-    }
-  }
-}
+function login(){
 
-function handleLogin() {
-  if (!gapiReady || !gisReady) {
-    setLoginStatus('Cargando librerías de Google…');
-    setTimeout(handleLogin, 800);
-    return;
-  }
-  setLoginStatus('Iniciando sesión…');
-  const hint = loadHint();
-  tokenClient.requestAccessToken({ prompt: hint ? '' : 'consent', login_hint: hint });
-}
+const role = document.getElementById("role").value
+const pass = document.getElementById("password").value
 
-function handleLogout() {
-  const token = gapi.client.getToken();
-  if (token) {
-    google.accounts.oauth2.revoke(token.access_token);
-    gapi.client.setToken('');
-  }
-  clearToken();
-  clearHint();
-  stock = [];
-  sheetNames = [];
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  setLoginStatus('Sesión cerrada');
+if(role==="admin" && pass!=="admin123"){
+alert("Contraseña incorrecta")
+return
 }
 
-async function afterLogin() {
-  // Get user profile
-  try {
-    const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: 'Bearer ' + gapi.client.getToken().access_token }
-    });
-    const info = await resp.json();
-    if (info.email) saveHint(info.email);
-
-    // ── Whitelist de usuarios autorizados ──────────────────────
-    const ALLOWED_EMAILS = [
-      'jponte@biomakers.net',
-      // Agregar más emails autorizados acá:
-      // 'otro@ejemplo.com',
-    ];
-    if (info.email && !ALLOWED_EMAILS.includes(info.email.toLowerCase())) {
-      document.getElementById('loading-overlay').style.display = 'none';
-      document.getElementById('login-screen').style.display  = 'flex';
-      setLoginStatus(`Acceso denegado para ${info.email}. Contactá al administrador.`, true);
-      handleLogout();
-      return;
-    }
-    // ────────────────────────────────────────────────────────────
-
-    document.getElementById('user-name').textContent = info.name || 'Usuario';
-    document.getElementById('user-email').textContent = info.email || '';
-    const wrap = document.getElementById('user-avatar-wrap');
-    if (info.picture) {
-      wrap.innerHTML = `<img src="${info.picture}" class="user-avatar" referrerpolicy="no-referrer">`;
-    } else {
-      const initials = (info.name||'U').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-      wrap.innerHTML = `<div class="user-avatar-placeholder">${initials}</div>`;
-    }
-  } catch(e) {}
-
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('loading-overlay').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  setAltaFechaHoy();
-  await syncFromSheets();
-}
+userRole = role
 
-function setLoginStatus(msg, isError=false) {
-  const el = document.getElementById('login-status');
-  el.textContent = msg;
-  el.style.color = isError ? 'var(--red)' : 'var(--dim)';
-}
+document.getElementById("login").classList.add("hidden")
+document.getElementById("app").classList.remove("hidden")
 
-// ═══════════════════════════════════════════════════════════════
-// SHEETS API — READ
-// ═══════════════════════════════════════════════════════════════
-async function syncFromSheets() {
-  setSyncState('syncing', 'Sincronizando…');
-  try {
-    // 1. Get all sheet names
-    const meta = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-    const spreadsheetTitle = meta.result.properties?.title || 'Google Sheets';
-    // Update page descriptions with real spreadsheet name
-    document.querySelectorAll('.sheet-title-ref').forEach(el => el.textContent = spreadsheetTitle);
-    sheetNames = meta.result.sheets
-      .map(s => s.properties.title)
-      .filter(t => /^\d{4}$/.test(t))   // only year tabs like "2024", "2025"
-      .sort();
-
-    // 2. Read all sheets in batch
-    // Hojas 2022 y 2023 no tienen checkbox en col A, los datos empiezan en A
-    const ranges = sheetNames.map(y => ['2022','2023'].includes(y) ? `${y}!A:J` : `${y}!B:K`);
-    if (!ranges.length) {
-      stock = [];
-      setSyncState('ok', 'Sin datos');
-      renderAll();
-      return;
-    }
-    const batchResp = await gapi.client.sheets.spreadsheets.values.batchGet({
-      spreadsheetId: SHEET_ID,
-      ranges
-    });
-
-    stock = [];
-    nextLocalId = 1;
-    const valueRanges = batchResp.result.valueRanges || [];
-
-    valueRanges.forEach((vr, sheetIdx) => {
-      const sheetName = sheetNames[sheetIdx];
-      const rows = vr.values || [];
-      const COL = buildColMap(rows[0]); // detect columns from header row
-      rows.forEach((row, rowIdx) => {
-        if (rowIdx === 0) return; // skip header row
-        const fecha = row[COL.fecha] || '';
-        if (!fecha) return; // skip empty rows
-        stock.push({
-          id: nextLocalId++,
-          sheetName,
-          rowIndex: rowIdx + 1, // 1-based, accounting for header
-          fecha:          fecha,
-          nombre:         row[COL.nombre]       || '',
-          catalogo:       row[COL.catalogo]     || '',
-          lote:           row[COL.lote]         || '',
-          vencimiento:    row[COL.vencimiento]  || '',
-          inicioConsumo:  row[COL.inicioConsumo]|| '',
-          finConsumo:     row[COL.finConsumo]   || '',
-          tempAlmacen:    row[COL.tempAlmacen]  || 'Ambiente',
-          rendimiento:    row[COL.rendimiento]  || '',
-          obs:            row[COL.obs]          || '',
-        });
-      });
-    });
-
-    // Default: mostrar el año más reciente en Consultas
-    // consultaYear permanece en 'todos' por defecto
-    setSyncState('ok', 'Sincronizado');
-    toast(`✓ ${stock.length} insumos cargados de ${sheetNames.length} hoja${sheetNames.length!==1?'s':''}`);
-    renderAll();
-  } catch(e) {
-    console.error(e);
-    setSyncState('error', 'Error al sincronizar');
-    toast('Error al leer Google Sheets: ' + (e.result?.error?.message || e.message), 'error');
-  }
-}
+render()
 
-function setSyncState(state, label) {
-  const btn = document.getElementById('sync-btn');
-  btn.className = 'sync-btn ' + state;
-  document.getElementById('sync-label').textContent = label;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// SHEETS API — WRITE (Alta)
-// ═══════════════════════════════════════════════════════════════
-const _sheetIdCache = {};
-async function getSheetId(sheetName) {
-  if (_sheetIdCache[sheetName] !== undefined) return _sheetIdCache[sheetName];
-  const meta = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-  meta.result.sheets.forEach(s => { _sheetIdCache[s.properties.title] = s.properties.sheetId; });
-  return _sheetIdCache[sheetName] ?? null;
-}
-function invalidateSheetIdCache() { Object.keys(_sheetIdCache).forEach(k => delete _sheetIdCache[k]); }
-
-async function writeRowsToSheet(sheetName, rows, catalogo) {
-  // Read cols B (fecha) and D (catalogo) to find insertion point
-  const readResp = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: `${sheetName}!B:D`,
-  });
-  const allRows = readResp.result.values || [];
-
-  let insertAfter = 1; // default: after header
-
-  if (catalogo) {
-    // Find last row that has this catalogo in col D (index 2 of B:D)
-    let lastCatRow = -1;
-    for (let i = 0; i < allRows.length; i++) {
-      if (allRows[i] && (allRows[i][2] || '').toString().trim().toLowerCase() === catalogo.toLowerCase()) {
-        lastCatRow = i; // 0-based index in values array
-      }
-    }
-    if (lastCatRow >= 0) {
-      insertAfter = lastCatRow + 1; // 1-based sheet row
-    } else {
-      // Catalogo not found: insert after last data row
-      for (let i = allRows.length - 1; i >= 0; i--) {
-        if (allRows[i] && allRows[i][0] && allRows[i][0].toString().trim() !== '') {
-          insertAfter = i + 1; break;
-        }
-      }
-    }
-  } else {
-    // No catalogo hint: insert after last data row
-    for (let i = allRows.length - 1; i >= 0; i--) {
-      if (allRows[i] && allRows[i][0] && allRows[i][0].toString().trim() !== '') {
-        insertAfter = i + 1; break;
-      }
-    }
-  }
-
-  const sheetId = await getSheetId(sheetName);
-
-  // Insert blank rows right after insertion point (inherit format from row above)
-  await gapi.client.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SHEET_ID,
-    resource: {
-      requests: [{
-        insertDimension: {
-          range: { sheetId, dimension: 'ROWS', startIndex: insertAfter, endIndex: insertAfter + rows.length },
-          inheritFromBefore: true
-        }
-      }]
-    }
-  });
-
-  // Write data (B:K, leave A for checkbox)
-  const startRow = insertAfter + 1; // 1-based for range notation
-  await gapi.client.sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
-    range: `${sheetName}!B${startRow}:K${startRow + rows.length - 1}`,
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: rows }
-  });
-}
+function agregar(){
 
-async function ensureSheetExists(year) {
-  if (sheetNames.includes(year)) return false;
-
-  // Find sheetId of an existing year sheet to copy format from
-  const meta = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-  const existing = meta.result.sheets.find(s => /^\d{4}$/.test(s.properties.title));
-  const sourceSheetId = existing ? existing.properties.sheetId : null;
-
-  // Create new sheet
-  const addResp = await gapi.client.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SHEET_ID,
-    resource: {
-      requests: [{
-        addSheet: {
-          properties: {
-            title: year,
-            gridProperties: { rowCount: 1000, columnCount: 12 }
-          }
-        }
-      }]
-    }
-  });
-  const newSheetId = addResp.result.replies[0].addSheet.properties.sheetId;
-
-  // Copy format from row 1 of an existing sheet if available
-  if (sourceSheetId !== null) {
-    await gapi.client.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SHEET_ID,
-      resource: {
-        requests: [{
-          copyPaste: {
-            source: { sheetId: sourceSheetId, startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 12 },
-            destination: { sheetId: newSheetId, startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 12 },
-            pasteType: 'PASTE_FORMAT'
-          }
-        }]
-      }
-    });
-  }
-
-  // Write header row
-  await gapi.client.sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
-    range: `${year}!B1:K1`,
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: [['Fecha','Insumo','N° Catálogo','N° Lote','Vencimiento','Inicio consumo','Fin consumo','Temp. almacén','Rendimiento','Observaciones']] }
-  });
-
-  sheetNames.push(year);
-  sheetNames.sort();
-  invalidateSheetIdCache(); // new sheet added
-  return true;
+const item={
+nombre:document.getElementById("nombre").value,
+catalogo:document.getElementById("catalogo").value,
+lote:document.getElementById("lote").value,
+vencimiento:document.getElementById("vencimiento").value,
+temp:document.getElementById("temp").value,
+obs:document.getElementById("obs").value
 }
 
-// ═══════════════════════════════════════════════════════════════
-// SHEETS API — WRITE (Baja — update specific row)
-// ═══════════════════════════════════════════════════════════════
-async function updateRowInSheet(item) {
-  // rowIndex is stored as rowIdx+1 where rowIdx skips the header → it IS the 1-based sheet row
-  const sheetRow = item.rowIndex;
-  const range = `${item.sheetName}!G${sheetRow}:K${sheetRow}`;
-  await gapi.client.sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
-    range,
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: [[
-      item.inicioConsumo || '',
-      item.finConsumo    || '',
-      item.tempAlmacen   || '',
-      item.rendimiento   || 'NA',
-      item.obs           || 'NA'
-    ]] }
-  });
-}
+stock.push(item)
 
-// ═══════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════
-function getAnio(item) { return item.sheetName || item.fecha?.substring(0,4) || '?'; }
-
-function getAnios() { return [...new Set(stock.map(getAnio))].sort(); }
-
-function getEstado(item) {
-  // Considerar dado de baja si tiene fecha de fin o "NA"
-  const fin = (item.finConsumo || '').trim();
-  if (fin) return 'baja';
-  if (!item.vencimiento) return 'disponible';
-  // Parsear DD/MM/YYYY o YYYY-MM-DD
-  let venceDate;
-  const v = item.vencimiento.trim();
-  if (v.includes('/')) {
-    const [d,m,y] = v.split('/');
-    venceDate = new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
-  } else {
-    venceDate = new Date(v);
-  }
-  if (isNaN(venceDate)) return 'disponible';
-  const diff = (venceDate - new Date()) / 86400000;
-  if (diff < 0)  return 'vencido';  // ya venció sin haber sido dado de baja
-  if (diff < 60) return 'vence';    // vence en menos de 60 días
-  return 'disponible';
-}
+historial.unshift({
+fecha:new Date().toLocaleString(),
+accion:"ALTA",
+producto:item.nombre
+})
 
-function fmtFecha(str) {
-  if (!str) return '—';
-  // Handle DD/MM/YYYY from sheets or YYYY-MM-DD
-  if (str.includes('/')) return str;
-  const [y,m,d] = str.split('-');
-  return d && m && y ? `${d}/${m}/${y}` : str;
-}
+guardar()
+render()
 
-function toSheetDate(isoStr) {
-  // Google Sheets accepts DD/MM/YYYY
-  if (!isoStr) return '';
-  const [y,m,d] = isoStr.split('-');
-  return `${d}/${m}/${y}`;
 }
 
-function estadoBadge(item) {
-  const e = getEstado(item);
-  if (e==='baja')     return '<span class="badge badge-baja">Dado de baja</span>';
-  if (e==='vencido')  return '<span class="badge badge-vencido">⚠ Vencido</span>';
-  if (e==='vence')    return '<span class="badge badge-vence">Por vencer</span>';
-  return '<span class="badge badge-disponible">Disponible</span>';
+function eliminar(i){
+
+if(userRole!=="admin"){
+alert("Solo admin puede eliminar")
+return
 }
 
-function tempBadge(t) { return `<span class="temp-badge">${t||'—'}</span>`; }
+historial.unshift({
+fecha:new Date().toLocaleString(),
+accion:"BAJA",
+producto:stock[i].nombre
+})
 
-function yearBadge(y) {
-  return `<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--blue-l);color:var(--blue);padding:2px 6px;border-radius:4px">${y}</span>`;
-}
+stock.splice(i,1)
+guardar()
+render()
 
-function getLetter(n) {
-  const base = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','Ñ','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
-  const b = base.length;
-  if (n < b) return base[n];
-  let result = '', idx = n + 1;
-  while (idx > 0) { idx--; result = base[idx % b] + result; idx = Math.floor(idx / b); }
-  return result;
 }
 
-function toast(msg, type='success') {
-  const c = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  t.className = `toast toast-${type}`;
-  t.innerHTML = `<span>${type==='success'?'✓':type==='info'?'ℹ':'✕'}</span> ${msg}`;
-  c.appendChild(t);
-  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)}, 4000);
+function normalizar(t){
+return (t||"").toLowerCase()
+.normalize("NFD")
+.replace(/\p{Diacritic}/gu,"")
 }
 
-// Escapa caracteres HTML para prevenir XSS al renderizar datos de la planilla
-function htmlEsc(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+function render(){
 
-function setAltaFechaHoy() {
-  const el = document.getElementById('alta-fecha');
-  if (el && !el.value) {
-    const hoy = new Date();
-    const y = hoy.getFullYear();
-    const m = String(hoy.getMonth()+1).padStart(2,'0');
-    const d = String(hoy.getDate()).padStart(2,'0');
-    el.value = `${y}-${m}-${d}`;
-    updatePreview();
-  }
-}
+const q = normalizar(document.getElementById("buscar").value)
 
-function renderAll() {
-  renderDashboard();
-  renderConsulta();
-}
+const tabla=document.getElementById("tabla")
+tabla.innerHTML=""
 
-// ═══════════════════════════════════════════════════════════════
-// NAV
-// ═══════════════════════════════════════════════════════════════
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n=>{
-    if(n.getAttribute('onclick')?.includes(id)) n.classList.add('active');
-  });
-  if(id==='consultas') renderConsulta();
-  if(id==='dashboard') renderDashboard();
-}
+stock
+.filter(item=>{
 
-// ═══════════════════════════════════════════════════════════════
-// YEAR TABS
-// ═══════════════════════════════════════════════════════════════
-function renderYearTabs(containerId, currentYear, onSelectFn) {
-  const años = getAnios().slice().reverse(); // más reciente primero
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  let html = `<button class="year-tab ${currentYear==='todos'?'active':''}" onclick="${onSelectFn}('todos')">
-    Todos <span class="tab-count">${stock.length}</span></button>`;
-  for (const año of años) {
-    const count = stock.filter(i=>getAnio(i)===año).length;
-    html += `<button class="year-tab ${currentYear===año?'active':''}" onclick="${onSelectFn}('${año}')">
-      📋 ${año} <span class="tab-count">${count}</span></button>`;
-  }
-  container.innerHTML = html;
-}
+const texto = normalizar(
+item.nombre+" "+
+item.catalogo+" "+
+item.lote+" "+
+item.vencimiento+" "+
+item.temp+" "+
+item.obs
+)
 
-// ═══════════════════════════════════════════════════════════════
-// DASHBOARD
-// ═══════════════════════════════════════════════════════════════
-function setDashYear(año) { dashYear = año; renderDashboard(); }
-
-function renderDashboard() {
-  renderYearTabs('dash-year-tabs', dashYear, 'setDashYear');
-  const filtered = dashYear==='todos' ? stock : stock.filter(i=>getAnio(i)===dashYear);
-  document.getElementById('stat-total').textContent = filtered.length;
-  document.getElementById('stat-disp').textContent  = filtered.filter(i=>getEstado(i)==='disponible').length;
-  document.getElementById('stat-baja').textContent  = filtered.filter(i=>getEstado(i)==='baja').length;
-  document.getElementById('stat-vence').textContent = filtered.filter(i=>getEstado(i)==='vence').length;
-  document.getElementById('stat-vencido').textContent = filtered.filter(i=>getEstado(i)==='vencido').length;
-  const sorted = [...filtered].sort((a,b)=>parseFecha(b.fecha)-parseFecha(a.fecha)).slice(0,10);
-  document.getElementById('dash-tbody').innerHTML = sorted.length
-    ? sorted.map(i=>`<tr>
-        <td>${fmtFecha(i.fecha)}</td><td>${yearBadge(getAnio(i))}</td>
-        <td>${i.nombre}</td><td><span class="mono">${i.catalogo}</span></td>
-        <td><span class="lote-badge">${i.lote}</span></td><td>${estadoBadge(i)}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="6" style="text-align:center;color:var(--dim);padding:32px">Sin datos</td></tr>';
-}
+return texto.includes(q)
 
-// ═══════════════════════════════════════════════════════════════
-// ALTA — AUTOCOMPLETE
-// ═══════════════════════════════════════════════════════════════
-function altaAC(field) {
-  updatePreview();
-  const q = document.getElementById('alta-'+field).value.trim().toLowerCase();
-  const listEl = document.getElementById('ac-'+field);
-  if (!q) { listEl.classList.remove('show'); return; }
-
-  const seen = new Set();
-  const sugs = [];
-  for (const item of stock) {
-    let val, subLabel;
-    if (field==='catalogo') { val=item.catalogo; subLabel=item.nombre; }
-    else if (field==='lote') { val=item.lote.replace(/\s+[A-ZÑ]{1,3}$/,'').trim(); subLabel=`${item.nombre} · Cat: ${item.catalogo} · Vence: ${fmtFecha(item.vencimiento)}`; }
-    else { val=item.nombre; subLabel=`Catálogo: ${item.catalogo}`; }
-    if (val.toLowerCase().includes(q) && !seen.has(val)) {
-      seen.add(val); sugs.push({val, subLabel, item});
-    }
-    if (sugs.length>=6) break;
-  }
-  altaSugs[field] = sugs;
-  if (!sugs.length) { listEl.classList.remove('show'); return; }
-  const esc = q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  listEl.innerHTML = sugs.map((s,idx)=>`
-    <div class="alta-ac-item" data-idx="${idx}" data-field="${field}">
-      <div class="ai-main">${s.val.replace(new RegExp(`(${esc})`,'gi'),'<strong style="color:var(--accent)">$1</strong>')}</div>
-      <div class="ai-sub">${s.subLabel}</div>
-    </div>`).join('');
-  listEl.classList.add('show');
-}
+})
+.forEach((item,i)=>{
 
-document.addEventListener('mousedown', e => {
-  const el = e.target.closest('.alta-ac-item');
-  if (el) { e.preventDefault(); altaACSelect(el.dataset.field, parseInt(el.dataset.idx)); }
-});
-
-function altaACSelect(field, idx) {
-  const sug = altaSugs[field]?.[idx]; if (!sug) return;
-  document.getElementById('alta-'+field).value = sug.val;
-  document.getElementById('ac-'+field).classList.remove('show');
-  const tag = document.getElementById('tag-'+field);
-  if (tag) { tag.classList.add('show'); setTimeout(()=>tag.classList.remove('show'),3000); }
-  flashFill('alta-'+field);
-  const item = sug.item;
-  const TEMPS_LIST = ['15°C a 30°C','2°C a 8°C','-30°C a -10°C','-25°C a -15°C','-80°C'];
-  const tempMap = Object.fromEntries(TEMPS_LIST.map((t,i)=>[t,i]));
-  // Always fill all related fields (overwrite if different insumo selected)
-  const n = document.getElementById('alta-nombre');
-  const c = document.getElementById('alta-catalogo');
-  if (field !== 'nombre') { n.value = item.nombre; flashFill('alta-nombre'); }
-  if (field !== 'catalogo') { c.value = item.catalogo; flashFill('alta-catalogo'); }
-  inferAndSetTemp(item.catalogo, item.tempAlmacen);
-  if (field === 'lote') {
-    const v = document.getElementById('alta-vencimiento');
-    if (!v.value) { v.value = item.vencimiento; flashFill('alta-vencimiento'); }
-  }
-  updatePreview();
-}
+const tr=document.createElement("tr")
 
-function flashFill(id) {
-  const el = document.getElementById(id); if (!el) return;
-  el.classList.add('autofilled'); setTimeout(()=>el.classList.remove('autofilled'),2000);
-}
+if(item.vencimiento){
 
-function toggleSinVenc(chk) {
-  const vencEl = document.getElementById('alta-vencimiento');
-  if (chk.checked) {
-    vencEl.value = '';
-    vencEl.disabled = true;
-    vencEl.placeholder = 'NA';
-  } else {
-    vencEl.disabled = false;
-    vencEl.placeholder = '';
-  }
-  updatePreview();
-}
+const v=new Date(item.vencimiento)
+const hoy=new Date()
 
-document.addEventListener('click', e => {
-  ['ac-nombre','ac-catalogo','ac-lote'].forEach(id=>{
-    const l=document.getElementById(id);
-    if(l && !e.target.closest(`#${id}`) && !e.target.closest('.field-wrap')) l.classList.remove('show');
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════
-// ALTA — PREVIEW & CONFIRM
-// ═══════════════════════════════════════════════════════════════
-function updatePreview() {
-  const nombre    = document.getElementById('alta-nombre').value.trim();
-  const catalogo  = document.getElementById('alta-catalogo').value.trim();
-  const lote      = document.getElementById('alta-lote').value.trim();
-  const cantidad  = parseInt(document.getElementById('alta-cantidad').value)||1;
-  const fecha     = document.getElementById('alta-fecha').value;
-  const venc      = document.getElementById('alta-vencimiento').value;
-  const temp      = document.getElementById('alta-temp').value;
-  const tbody     = document.getElementById('preview-tbody');
-  const año       = fecha ? fecha.substring(0,4) : '—';
-
-  if (!nombre && !catalogo && !lote) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--dim);padding:24px">Completá los datos para ver la vista previa</td></tr>';
-    return;
-  }
-  let rows = '';
-  for (let i=0; i<cantidad; i++) {
-    const loteCompleto = lote ? `${lote} ${getLetter(i)}` : getLetter(i);
-    rows += `<tr class="preview-row-new">
-      <td>${fmtFecha(fecha)||'—'}</td><td>${nombre||'—'}</td>
-      <td><span class="mono">${catalogo||'—'}</span></td>
-      <td><span class="lote-badge">${loteCompleto}</span></td>
-      <td>${fmtFecha(venc)||'—'}</td><td>${tempBadge(temp)}</td>
-      <td>${yearBadge(año)}</td>
-    </tr>`;
-  }
-  tbody.innerHTML = rows;
-}
+const diff=(v-hoy)/(1000*60*60*24)
 
-async function confirmarAlta() {
-  const nombre   = document.getElementById('alta-nombre').value.trim();
-  const catalogo = document.getElementById('alta-catalogo').value.trim();
-  const lote     = document.getElementById('alta-lote').value.trim();
-  const cantidad = parseInt(document.getElementById('alta-cantidad').value)||1;
-  const fecha    = document.getElementById('alta-fecha').value;
-  const venc     = document.getElementById('alta-vencimiento').value;
-  const tempSel  = document.getElementById('alta-temp');
-  const temp     = tempSel.value === 'otra' ? (document.getElementById('temp-custom').value.trim() || 'Otra') : tempSel.value;
-
-  const sinVenc = document.getElementById('chk-sin-venc')?.checked;
-  if (!nombre||!catalogo||!lote||!fecha||(!venc && !sinVenc)) {
-    toast('Completá todos los campos obligatorios','error'); return;
-  }
-
-  const año = fecha.substring(0,4);
-  const btn = document.getElementById('btn-confirmar-alta');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Escribiendo en Sheets…';
-
-  try {
-    const esNueva = await ensureSheetExists(año);
-
-    // Build rows to append
-    const rows = [];
-    for (let i=0; i<cantidad; i++) {
-      rows.push([
-        toSheetDate(fecha),
-        nombre, catalogo,
-        `${lote} ${getLetter(i)}`,
-        sinVenc ? 'NA' : toSheetDate(venc),
-        '', '', temp, '', ''
-      ]);
-    }
-    await writeRowsToSheet(año, rows, catalogo);
-
-    if (esNueva) {
-      toast(`✦ Hoja "${año}" creada — ${cantidad} insumo${cantidad>1?'s':''} registrado${cantidad>1?'s':''}`);
-    } else {
-      toast(`✓ ${cantidad} unidad${cantidad>1?'es':''} registrada${cantidad>1?'s':''} en hoja ${año}`);
-    }
-
-    limpiarAlta();
-    await syncFromSheets(); // reload data (also picks up new sheets)
-  } catch(e) {
-    console.error(e);
-    toast('Error al escribir en Sheets: '+(e.result?.error?.message||e.message), 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Confirmar alta en Sheets';
-  }
-}
+if(diff<0) tr.classList.add("expired")
+else if(diff<30) tr.classList.add("warning")
 
-function limpiarAlta() {
-  ['alta-nombre','alta-catalogo','alta-lote','alta-vencimiento'].forEach(id=>{ const e=document.getElementById(id); if(e){e.value='';e.disabled=false;} });
-  const chkSV = document.getElementById('chk-sin-venc'); if(chkSV) chkSV.checked=false;
-  document.getElementById('alta-cantidad').value=1;
-  document.getElementById('alta-temp').selectedIndex=0;
-  const tcEl=document.getElementById('temp-custom'); if(tcEl){tcEl.classList.remove('show');tcEl.value='';}
-  const tagT=document.getElementById('tag-temp'); if(tagT) tagT.style.display='none';
-  const el = document.getElementById('alta-fecha');
-  const hoy = new Date();
-  el.value = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
-  updatePreview();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// BAJA
-// ═══════════════════════════════════════════════════════════════
-function onBajaTipoChange() {
-  const tipo = document.getElementById('baja-tipo').value;
-  const isFecha = tipo==='fecha';
-  document.getElementById('baja-text-wrap').style.display = isFecha?'none':'flex';
-  document.getElementById('baja-date-wrap').style.display = isFecha?'flex':'none';
-  const labels = {nombre:'Nombre del insumo',catalogo:'N° Catálogo',lote:'N° Lote'};
-  document.getElementById('baja-search-label').textContent = labels[tipo]||'Término';
-  document.getElementById('baja-results').classList.remove('show');
-  document.getElementById('baja-form-card').classList.remove('show');
-  bajaSelectedId = null;
-}
+tr.innerHTML=`
+<td>${item.nombre}</td>
+<td>${item.catalogo}</td>
+<td>${item.lote}</td>
+<td>${item.vencimiento}</td>
+<td>${item.temp}</td>
+<td>${item.obs}</td>
+<td>
+<button onclick="eliminar(${i})">Eliminar</button>
+</td>
+`
 
-function buscarBaja() {
-  const tipo = document.getElementById('baja-tipo').value;
-  const q = tipo==='fecha'
-    ? document.getElementById('baja-search-date').value
-    : document.getElementById('baja-search-input').value.trim().toLowerCase();
-  if (!q) { document.getElementById('baja-results').classList.remove('show'); return; }
-
-  let results = stock.filter(i => {
-    if (getEstado(i)==='baja') return false;
-    if (tipo==='nombre')   return i.nombre.toLowerCase().includes(q);
-    if (tipo==='catalogo') return i.catalogo.toLowerCase().includes(q);
-    if (tipo==='lote')     return i.lote.toLowerCase().includes(q);
-    if (tipo==='fecha') {
-      const fq = q.split('-').reverse().join('/');
-      return i.fecha===q || i.fecha===fq;
-    }
-    return false;
-  });
-
-  const list = document.getElementById('baja-list');
-  list.innerHTML = results.length
-    ? results.map(i=>`
-        <div class="insumo-row" id="row-${i.id}" onclick="selectBaja(${i.id})">
-          <div class="insumo-row-icon">🧪</div>
-          <div class="insumo-row-info">
-            <div class="insumo-row-name">${i.nombre}</div>
-            <div class="insumo-row-cols">
-              <div class="insumo-row-col"><span class="insumo-row-col-label">Catálogo</span><span class="insumo-row-col-val">${i.catalogo}</span></div>
-              <div class="insumo-row-divider"></div>
-              <div class="insumo-row-col"><span class="insumo-row-col-label">Lote</span><span class="insumo-row-col-val">${i.lote}</span></div>
-              <div class="insumo-row-divider"></div>
-              <div class="insumo-row-col"><span class="insumo-row-col-label">Llegada</span><span class="insumo-row-col-val">${fmtFecha(i.fecha)}</span></div>
-            </div>
-          </div>
-          <div class="check-circle"><span class="check-icon">✓</span></div>
-        </div>`).join('')
-    : '<div class="empty-state"><span class="es-icon">🔍</span><p>No se encontraron insumos disponibles</p></div>';
-
-  document.getElementById('baja-results').classList.add('show');
-  document.getElementById('baja-form-card').classList.remove('show');
-  bajaSelectedId = null;
-}
+tabla.appendChild(tr)
 
-function selectBaja(id) {
-  bajaSelectedId = id;
-  document.querySelectorAll('.insumo-row').forEach(r=>r.classList.remove('selected'));
-  document.getElementById('row-'+id)?.classList.add('selected');
-  const item = stock.find(i=>i.id===id);
-  document.getElementById('baja-selected-tag').innerHTML =
-    `<div class="selected-tag">✓ <strong>${item.nombre}</strong> — Lote <span class="mono">${item.lote}</span> — ${yearBadge(getAnio(item))}</div>`;
-  document.getElementById('baja-inicio').value = new Date().toISOString().split('T')[0];
-  document.getElementById('baja-fin').value = '';
-  document.getElementById('baja-rendimiento').value = item.rendimiento||'';
-  document.getElementById('baja-obs').value = item.obs||'';
-  document.getElementById('baja-form-card').classList.add('show');
-  setTimeout(()=>document.getElementById('baja-form-card').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
-}
+})
 
-async function confirmarBaja() {
-  if (!bajaSelectedId) { toast('Seleccioná un insumo primero','error'); return; }
-  const inicio = document.getElementById('baja-inicio').value;
-  const fin    = document.getElementById('baja-fin').value;
-  const rend   = document.getElementById('baja-rendimiento').value;
-  const obs    = document.getElementById('baja-obs').value;
-  if (!inicio) { toast('La fecha de inicio es obligatoria','error'); return; }
-
-  const btn = document.getElementById('btn-confirmar-baja');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Actualizando Sheets…';
-
-  try {
-    const item = stock.find(i=>i.id===bajaSelectedId);
-    item.inicioConsumo = toSheetDate(inicio);
-    item.finConsumo    = toSheetDate(fin);
-    item.rendimiento   = rend;
-    item.obs           = obs;
-    await updateRowInSheet(item);
-    toast(`✓ Baja registrada: "${item.nombre}" — Lote ${item.lote}`);
-    cancelarBaja();
-    document.getElementById('baja-results').classList.remove('show');
-    document.getElementById('baja-search-input').value='';
-    await syncFromSheets();
-  } catch(e) {
-    console.error(e);
-    toast('Error al actualizar Sheets: '+(e.result?.error?.message||e.message),'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Confirmar baja en Sheets';
-  }
-}
+renderHistorial()
 
-function cancelarBaja() {
-  bajaSelectedId = null;
-  document.getElementById('baja-form-card').classList.remove('show');
-  document.querySelectorAll('.insumo-row').forEach(r=>r.classList.remove('selected'));
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CONSULTAS
-// ═══════════════════════════════════════════════════════════════
-function setConsultaYear(año) { consultaYear=año; renderConsulta(); }
-function setFilter(f,btn) {
-  consultaFilter=f;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderConsulta();
-}
-function buscarConsulta() {
-  consultaQuery=document.getElementById('consulta-input').value.trim().toLowerCase();
-  renderACConsulta(); renderConsulta();
-}
-function renderACConsulta() {
-  const q=consultaQuery, list=document.getElementById('ac-list');
-  if (!q||q.length<2) { list.classList.remove('show'); return; }
-  const seen=new Set(), sugs=[];
-  for (const item of stock) {
-    for (const k of [item.nombre,item.catalogo,item.lote]) {
-      if (k.toLowerCase().includes(q)&&!seen.has(k)) {
-        seen.add(k);
-        const esc=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-        const hl=k.replace(new RegExp(`(${esc})`,'gi'),'<span class="ac-highlight">$1</span>');
-        const sub=k===item.nombre?`Cat: ${item.catalogo} · ${getAnio(item)}`:`En: ${item.nombre}`;
-        sugs.push({main:hl,sub,val:k});
-      }
-    }
-    if(sugs.length>=6) break;
-  }
-  if(!sugs.length){list.classList.remove('show');return;}
-  list.innerHTML=sugs.map(s=>`<div class="autocomplete-item" onclick="selectACConsulta('${s.val.replace(/'/g,"\\'")}')"><div class="ac-main">${s.main}</div><div class="ac-sub">${s.sub}</div></div>`).join('');
-  list.classList.add('show');
-}
-function selectACConsulta(val) {
-  document.getElementById('consulta-input').value=val;
-  consultaQuery=val.toLowerCase();
-  document.getElementById('ac-list').classList.remove('show');
-  renderConsulta();
-}
-document.addEventListener('click',e=>{
-  if(!e.target.closest('.search-wrap')) document.getElementById('ac-list')?.classList.remove('show');
-});
-
-function parseFecha(str) {
-  if (!str) return new Date(0);
-  if (str.includes('/')) { const [d,m,y]=str.split('/'); return new Date(`${y}-${m}-${d}`); }
-  return new Date(str);
-}
+function renderHistorial(){
 
-function sortConsulta(col) {
-  if (consultaSort.col === col) {
-    consultaSort.dir = consultaSort.dir === 'asc' ? 'desc' : 'asc';
-  } else {
-    consultaSort.col = col;
-    consultaSort.dir = 'asc';
-  }
-  renderConsulta();
-}
+const t=document.getElementById("historial")
+t.innerHTML=""
 
-function renderConsulta() {
-  renderYearTabs('consulta-year-tabs', consultaYear, 'setConsultaYear');
-  let items = consultaYear==='todos' ? stock : stock.filter(i=>getAnio(i)===consultaYear);
-  if (consultaQuery) items=items.filter(i=>
-    i.nombre.toLowerCase().includes(consultaQuery)||
-    i.catalogo.toLowerCase().includes(consultaQuery)||
-    i.lote.toLowerCase().includes(consultaQuery));
-  if (consultaFilter!=='todos') items=items.filter(i=>getEstado(i)===consultaFilter);
-
-  // Ordenamiento
-  const { col, dir } = consultaSort;
-  const mult = dir === 'asc' ? 1 : -1;
-
-  // Si filtro es "vence", ordenar siempre por vencimiento ascendente (más próximo primero)
-  if (consultaFilter === 'vence' && col === 'fecha') {
-    items = [...items].sort((a,b) => (parseFecha(a.vencimiento) - parseFecha(b.vencimiento)));
-  } else {
-    items = [...items].sort((a,b) => {
-      let va, vb;
-      if (col==='nombre')      { va=a.nombre;      vb=b.nombre; }
-      else if (col==='catalogo'){ va=a.catalogo;    vb=b.catalogo; }
-      else if (col==='anio')   { va=getAnio(a);    vb=getAnio(b); }
-      else if (col==='fecha')  { return mult*(parseFecha(a.fecha)-parseFecha(b.fecha)); }
-      else if (col==='vencimiento'){ return mult*(parseFecha(a.vencimiento)-parseFecha(b.vencimiento)); }
-      else if (col==='estado') { va=getEstado(a);  vb=getEstado(b); }
-      else { return mult*(parseFecha(a.fecha)-parseFecha(b.fecha)); }
-      return mult * va.localeCompare(vb);
-    });
-  }
-
-  // Actualizar indicadores visuales en headers
-  ['nombre','catalogo','anio','fecha','vencimiento','estado'].forEach(c => {
-    const el = document.getElementById('sort-'+c);
-    if (!el) return;
-    el.textContent = consultaSort.col===c ? (consultaSort.dir==='asc' ? ' ↑' : ' ↓') : '';
-  });
-
-  const tbody=document.getElementById('consulta-tbody');
-  const count=document.getElementById('consulta-count');
-  if(!items.length) {
-    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--dim);padding:32px">No se encontraron insumos</td></tr>';
-    count.textContent=''; return;
-  }
-  tbody.innerHTML=items.map(i=>{
-    const e=getEstado(i), rc=e==='baja'?'row-baja':'row-disponible';
-    const uso=i.inicioConsumo?(i.finConsumo?`${i.inicioConsumo} → ${i.finConsumo}`:`Desde ${i.inicioConsumo}`):'—';
-    return `<tr class="${rc}" data-id="${i.id}">
-      <td>${htmlEsc(i.nombre)}</td><td><span class="mono">${htmlEsc(i.catalogo)}</span></td>
-      <td><span class="lote-badge">${htmlEsc(i.lote)}</span></td><td>${yearBadge(getAnio(i))}</td>
-      <td>${fmtFecha(i.fecha)}</td><td>${fmtFecha(i.vencimiento)}</td>
-      <td>${tempBadge(htmlEsc(i.tempAlmacen))}</td><td>${estadoBadge(i)}</td>
-      <td style="font-size:12px;color:var(--mid)">${uso}</td>
-    </tr>`;
-  }).join('');
-  count.textContent=`Mostrando ${items.length} insumo${items.length!==1?'s':''} · ${consultaYear==='todos'?'Todos los años':'Hoja '+consultaYear}`;
-  updateConsultaActions();
-}
+historial.slice(0,50).forEach(h=>{
 
-let consultaSelected = new Set();
-let consultaLastIdx   = null;
+const tr=document.createElement("tr")
 
-function getConsultaRows() {
-  return [...document.querySelectorAll('#consulta-tbody tr[data-id]')];
-}
+tr.innerHTML=`
+<td>${h.fecha}</td>
+<td>${h.accion}</td>
+<td>${h.producto}</td>
+`
 
-function setRowSelected(tr, val) {
-  const id = parseInt(tr.dataset.id);
-  if (val) { consultaSelected.add(id);    tr.classList.add('selected-row'); }
-  else     { consultaSelected.delete(id); tr.classList.remove('selected-row'); }
-}
+t.appendChild(tr)
 
-function updateConsultaActions() {
-  const n = consultaSelected.size;
-  const bar = document.getElementById('consulta-actions');
-  const lbl = document.getElementById('consulta-sel-count');
-  if (n === 0) { bar.classList.remove('show'); return; }
-  bar.classList.add('show');
-  lbl.textContent = `${n} insumo${n>1?'s':''} seleccionado${n>1?'s':''}`;
-  document.querySelector('.btn-modificar').style.display = n === 1 ? '' : 'none';
-}
+})
 
-// Attach Excel-like mousedown on the table body
-document.addEventListener('DOMContentLoaded', () => {
-  const tbody = document.getElementById('consulta-tbody');
-  if (!tbody) return;
-  tbody.addEventListener('mousedown', e => {
-    const tr = e.target.closest('tr[data-id]');
-    if (!tr) return;
-    e.preventDefault();
-    const rows = getConsultaRows();
-    const idx  = rows.indexOf(tr);
-    const id   = parseInt(tr.dataset.id);
-    if (e.shiftKey && consultaLastIdx !== null) {
-      const from = Math.min(consultaLastIdx, idx);
-      const to   = Math.max(consultaLastIdx, idx);
-      rows.forEach((r, i) => { if (i >= from && i <= to) setRowSelected(r, true); });
-    } else if (e.ctrlKey || e.metaKey) {
-      setRowSelected(tr, !consultaSelected.has(id));
-      consultaLastIdx = idx;
-    } else {
-      const onlyThis = consultaSelected.size === 1 && consultaSelected.has(id);
-      rows.forEach(r => setRowSelected(r, false));
-      if (!onlyThis) { setRowSelected(tr, true); consultaLastIdx = idx; }
-      else           { consultaLastIdx = null; }
-    }
-    updateConsultaActions();
-  });
-});
-
-// Click outside table deselects all
-document.addEventListener('mousedown', e => {
-  // Don't clear selection if clicking inside the edit modal
-  if (e.target.closest('#modal-edicion')) return;
-  if (!e.target.closest('#consulta-tbody') && !e.target.closest('.consulta-actions')) {
-    getConsultaRows().forEach(r => setRowSelected(r, false));
-    consultaLastIdx = null;
-    updateConsultaActions();
-  }
-});
-
-function abrirModalModificar() {
-  if (consultaSelected.size !== 1) return;
-  const id = [...consultaSelected][0];
-  const i = stock.find(x => x.id === id);
-  if (!i) return;
-  const toInput = str => {
-    if (!str || str.toUpperCase() === 'NA' || str === '—') return '';
-    if (str.includes('/')) { const [d,m,y]=str.split('/'); return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
-    return str;
-  };
-  document.getElementById('me-nombre').value = i.nombre;
-  document.getElementById('me-catalogo').value = i.catalogo;
-  document.getElementById('me-lote').value = i.lote;
-  document.getElementById('me-fecha').value = toInput(i.fecha);
-  const isVencNA = !i.vencimiento || i.vencimiento.toUpperCase()==='NA';
-  document.getElementById('me-venc').value = isVencNA ? '' : toInput(i.vencimiento);
-  document.getElementById('me-venc-na').checked = isVencNA;
-  document.getElementById('me-venc').disabled = isVencNA;
-  const TEMPS_MODAL = ['15°C a 30°C','2°C a 8°C','-30°C a -10°C','-25°C a -15°C','-80°C'];
-  const meTempSel = document.getElementById('me-temp');
-  const meTempCus = document.getElementById('me-temp-custom');
-  if (TEMPS_MODAL.includes(i.tempAlmacen)) {
-    meTempSel.value = i.tempAlmacen; meTempCus.classList.remove('show');
-  } else {
-    meTempSel.value = 'otra'; meTempCus.classList.add('show'); meTempCus.value = i.tempAlmacen;
-  }
-  document.getElementById('me-inicio').value = toInput(i.inicioConsumo);
-  document.getElementById('me-fin').value = toInput(i.finConsumo);
-  document.getElementById('me-obs').value = i.obs;
-  document.getElementById('modal-edicion').style.display = 'flex';
 }
 
-function cerrarModal() {
-  document.getElementById('modal-edicion').style.display = 'none';
-}
-function onModalVencNAChange() {
-  const cb = document.getElementById('me-venc-na');
-  const inp = document.getElementById('me-venc');
-  inp.disabled = cb.checked;
-  if (cb.checked) inp.value = '';
-}
-function onMeTempChange() {
-  const sel = document.getElementById('me-temp');
-  const cus = document.getElementById('me-temp-custom');
-  if (sel.value === 'otra') { cus.classList.add('show'); cus.focus(); }
-  else cus.classList.remove('show');
-}
+function iniciarScanner(){
 
-async function guardarModificacion() {
-  const id = [...consultaSelected][0];
-  const item = stock.find(x => x.id === id);
-  if (!item) return;
-
-  // Read ALL values from modal BEFORE closing it
-  const updates = {
-    nombre:        document.getElementById('me-nombre').value.trim(),
-    catalogo:      document.getElementById('me-catalogo').value.trim(),
-    lote:          document.getElementById('me-lote').value.trim(),
-    fecha:         toSheetDate(document.getElementById('me-fecha').value),
-    vencimiento:   document.getElementById('me-venc-na').checked ? 'NA' : toSheetDate(document.getElementById('me-venc').value),
-    tempAlmacen:   document.getElementById('me-temp').value === 'otra'
-                     ? (document.getElementById('me-temp-custom').value.trim() || 'Otra')
-                     : document.getElementById('me-temp').value,
-    inicioConsumo: toSheetDate(document.getElementById('me-inicio').value),
-    finConsumo:    toSheetDate(document.getElementById('me-fin').value),
-    obs:           document.getElementById('me-obs').value.trim(),
-  };
-
-  // NOW close modal
-  cerrarModal();
-  Object.assign(item, updates);
-
-  toast('Guardando…', 'info');
-  try {
-    const sheetRow = item.rowIndex;
-    await gapi.client.sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: `${item.sheetName}!B${sheetRow}:K${sheetRow}`,
-      valueInputOption: 'USER_ENTERED',
-      resource: { values: [[
-        item.fecha, item.nombre, item.catalogo, item.lote, item.vencimiento,
-        item.inicioConsumo, item.finConsumo, item.tempAlmacen, item.rendimiento, item.obs
-      ]] }
-    });
-    toast('✓ Insumo modificado correctamente', 'success');
-    consultaSelected.clear();
-    updateConsultaActions();
-    await syncFromSheets();
-  } catch(e) {
-    toast('Error al guardar: ' + (e.result?.error?.message || e.message), 'error');
-  }
+Quagga.init({
+inputStream:{
+name:"Live",
+type:"LiveStream",
+target:document.querySelector("#scanner")
+},
+decoder:{
+readers:["code_128_reader","ean_reader","ean_8_reader"]
 }
+},function(err){
 
-async function confirmarEliminar() {
-  const n = consultaSelected.size;
-  if (!n) return;
-  const nombres = [...consultaSelected].map(id => stock.find(x=>x.id===id)?.nombre || '').join(', ');
-  if (!confirm(`¿Eliminar ${n} insumo${n>1?'s':''}?
-
-${nombres}
-
-Esta acción no se puede deshacer.`)) return;
-
-  const btn = document.querySelector('.btn-eliminar');
-  btn.textContent = 'Eliminando…'; btn.disabled = true;
-  try {
-    // Group by sheet, sort rows descending to delete from bottom up (avoid index shift)
-    const toDelete = [...consultaSelected].map(id => stock.find(x=>x.id===id)).filter(Boolean);
-    const bySheet = {};
-    toDelete.forEach(i => {
-      if (!bySheet[i.sheetName]) bySheet[i.sheetName] = [];
-      bySheet[i.sheetName].push(i.rowIndex); // rowIndex is already 1-based sheet row
-    });
-    for (const [sheetName, rows] of Object.entries(bySheet)) {
-      const sheetId = await getSheetId(sheetName);
-      // Sort descending so higher row indices delete first (avoids index shift)
-      const sortedDesc = rows.slice().sort((a,b)=>b-a);
-      // Send all deletes in a single batchUpdate request
-      const requests = sortedDesc.map(row => ({ deleteDimension: {
-        range: { sheetId, dimension: 'ROWS', startIndex: row - 1, endIndex: row }
-      }}));
-      await gapi.client.sheets.spreadsheets.batchUpdate({
-        spreadsheetId: SHEET_ID,
-        resource: { requests }
-      });
-    }
-    toast(`🗑️ ${n} insumo${n>1?'s':''} eliminado${n>1?'s':''}`, 'success');
-    consultaSelected.clear();
-    updateConsultaActions();
-    await syncFromSheets();
-  } catch(e) {
-    toast('Error al eliminar: ' + (e.result?.error?.message || e.message), 'error');
-  } finally {
-    btn.textContent = '🗑️ Eliminar seleccionados'; btn.disabled = false;
-  }
+if(err){
+console.log(err)
+return
 }
 
-// ═══════════════════════════════════════════════════════════════
-// TEMPERATURA INTELIGENTE
-// ═══════════════════════════════════════════════════════════════
-const CANONICAL_TEMPS = [
-  { key:'15°C a 30°C',   re:/ambien|15.*(25|30)|16.*30|17.*30|18.*30|19.*30|room.?temp/i },
-  { key:'2°C a 8°C',     re:/helader|fridge|\b[24].?[\u2013-]?\s*8\b|\b2\s*a\s*8\b/i },
-  { key:'-30°C a -10°C', re:/-30.*-10|-10.*-3[0-9]|-2[0-9](?!.*-\d{2})/i },
-  { key:'-25°C a -15°C', re:/-25.*-15|-15.*-25/i },
-  { key:'-80°C',              re:/-80/i },
-];
-const TEMPS_KEYS = CANONICAL_TEMPS.map(c => c.key);
-
-function normalizeTemp(raw) {
-  if (!raw) return null;
-  const s = raw.toString().trim();
-  if (/^\d{4}-\d{2}|^NA$/i.test(s)) return null;
-  for (const c of CANONICAL_TEMPS) {
-    if (c.re.test(s)) return c.key;
-  }
-  return null;
-}
+Quagga.start()
 
-function setAltaTemp(val) {
-  const sel = document.getElementById('alta-temp');
-  const cus = document.getElementById('temp-custom');
-  const tag = document.getElementById('tag-temp');
-  const idx = TEMPS_KEYS.indexOf(val);
-  if (idx >= 0) {
-    sel.selectedIndex = idx;
-    cus.classList.remove('show');
-  } else if (val) {
-    sel.value = 'otra';
-    cus.classList.add('show');
-    cus.value = val;
-  }
-  flashFill('alta-temp');
-  if (tag) { tag.style.display = 'inline'; }
-}
+})
 
-function inferAndSetTemp(catalogo, fallbackRaw) {
-  // Try to infer from all stock items with same catalogo
-  const matches = stock.filter(i => i.catalogo.toLowerCase() === (catalogo||'').toLowerCase());
-  const counts = {};
-  for (const i of matches) {
-    const n = normalizeTemp(i.tempAlmacen);
-    if (n) counts[n] = (counts[n]||0) + 1;
-  }
-  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-  const winner = sorted[0]?.[0] || normalizeTemp(fallbackRaw);
-  if (winner) setAltaTemp(winner);
-}
+Quagga.onDetected(function(data){
 
-function onAltaTempChange() {
-  const sel = document.getElementById('alta-temp');
-  const cus = document.getElementById('temp-custom');
-  const tag = document.getElementById('tag-temp');
-  if (sel.value === 'otra') { cus.classList.add('show'); cus.focus(); }
-  else cus.classList.remove('show');
-  if (tag) tag.style.display = 'none'; // user overrode — hide hint
-  updatePreview();
-}
+const code=data.codeResult.code
+document.getElementById("catalogo").value=code
 
-// BARCODE / QR SCANNER
-let barcodeTimer = null;
-
-function onBarcodeInput() {
-  clearTimeout(barcodeTimer);
-  barcodeTimer = setTimeout(() => {
-    const val = document.getElementById('barcode-input').value.trim();
-    if (val.length >= 3) processBarcodeCode(val);
-  }, 500);
-}
+Quagga.stop()
 
-function onBarcodeKey(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    clearTimeout(barcodeTimer);
-    const val = document.getElementById('barcode-input').value.trim();
-    if (val) processBarcodeCode(val);
-  }
-}
+})
 
-function processBarcodeCode(code) {
-  const input = document.getElementById('barcode-input');
-  input.classList.add('flash');
-  setTimeout(() => input.classList.remove('flash'), 400);
-  const codeLow = code.toLowerCase();
-  const match =
-    stock.find(i => i.catalogo.toLowerCase() === codeLow) ||
-    stock.find(i => i.lote.toLowerCase().replace(/\s+[a-z]{1,3}$/, '') === codeLow) ||
-    stock.find(i => i.lote.toLowerCase() === codeLow) ||
-    stock.find(i => i.catalogo.toLowerCase().includes(codeLow)) ||
-    stock.find(i => i.nombre.toLowerCase().includes(codeLow));
-  const TEMPS_LIST = ['15°C a 30°C','2°C a 8°C','-30°C a -10°C','-25°C a -15°C','-80°C'];
-  const tempMap = Object.fromEntries(TEMPS_LIST.map((t,i)=>[t,i]));
-  if (match) {
-    document.getElementById('alta-nombre').value = match.nombre;
-    document.getElementById('alta-catalogo').value = match.catalogo;
-    const loteEl = document.getElementById('alta-lote');
-    if (!loteEl.value.trim()) loteEl.value = match.lote.replace(/\s+[A-Z]{1,3}$/, '').trim();
-    const temp = document.getElementById('alta-temp');
-    inferAndSetTemp(match.catalogo, match.tempAlmacen);
-    ['alta-nombre','alta-catalogo','alta-lote'].forEach(flashFill);
-    const el = document.getElementById('barcode-status');
-    el.className = 'barcode-status found';
-    el.textContent = 'Encontrado: ' + match.nombre + ' - Cat: ' + match.catalogo;
-    toast('Codigo encontrado: ' + match.nombre, 'success');
-    updatePreview();
-  } else {
-    const catEl = document.getElementById('alta-catalogo');
-    if (!catEl.value.trim()) { catEl.value = code; flashFill('alta-catalogo'); }
-    const el = document.getElementById('barcode-status');
-    el.className = 'barcode-status notfound';
-    el.textContent = 'Codigo "' + code + '" no encontrado - completa los datos manualmente';
-    toast('Codigo no encontrado en stock', 'info');
-    updatePreview();
-  }
 }
 
-function clearBarcode() {
-  document.getElementById('barcode-input').value = '';
-  const el = document.getElementById('barcode-status');
-  el.className = 'barcode-status idle';
-  el.textContent = 'Listo - escana un codigo para autocompletar';
-}
+render()
 
-const _showPage = showPage;
-window.showPage = function(id) {
-  _showPage(id);
-  if (id === 'alta') setTimeout(() => { const b = document.getElementById('barcode-input'); if(b) b.focus(); }, 200);
-};
 </script>
 
-<!-- Google APIs -->
-<script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-<script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
 </html>

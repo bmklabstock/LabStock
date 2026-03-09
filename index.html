@@ -675,8 +675,37 @@ const DISCOVERY   = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 // Fila: [checkbox(A), fecha(B), nombre(C), catalogo(D), lote(E), vencimiento(F),
 //        inicioConsumo(G), finConsumo(H), tempAlmacen(I), rendimiento(J), obs(K)]
 // Cuando leemos con range "Año!B:K" → índices 0..9
-const COL = { fecha:0, nombre:1, catalogo:2, lote:3, vencimiento:4,
-              inicioConsumo:5, finConsumo:6, tempAlmacen:7, rendimiento:8, obs:9 };
+// COL se construye dinámicamente leyendo el header de cada hoja (ver buildColMap)
+// Fallback a índices fijos si no se encuentra el header
+const COL_DEFAULTS = { fecha:0, nombre:1, catalogo:2, lote:3, vencimiento:4,
+                       inicioConsumo:5, finConsumo:6, tempAlmacen:7, rendimiento:8, obs:9 };
+
+// Nombres de columna aceptados (variantes posibles en la planilla)
+const COL_NAMES = {
+  fecha:        ['fecha llegada','fecha','llegada','date'],
+  nombre:       ['nombre','insumo','nombre del insumo','producto'],
+  catalogo:     ['n° catálogo','catalogo','catálogo','n° catalogo','catalog','cat'],
+  lote:         ['n° lote','lote','lot','batch','n° lote'],
+  vencimiento:  ['vencimiento','vence','expiry','exp','fecha vencimiento'],
+  inicioConsumo:['inicio consumo','inicio','start'],
+  finConsumo:   ['fin consumo','fin','baja','end'],
+  tempAlmacen:  ['temp.','temperatura','temp','almacenamiento','temperatura almacenamiento'],
+  rendimiento:  ['rendimiento','rend','yield'],
+  obs:          ['observaciones','obs','notas','notes'],
+};
+
+function buildColMap(headerRow) {
+  if (!headerRow) return COL_DEFAULTS;
+  const map = { ...COL_DEFAULTS };
+  const normalized = headerRow.map(h => (h||'').toString().toLowerCase().trim());
+  for (const [field, aliases] of Object.entries(COL_NAMES)) {
+    for (const alias of aliases) {
+      const idx = normalized.findIndex(h => h.includes(alias));
+      if (idx >= 0) { map[field] = idx; break; }
+    }
+  }
+  return map;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -807,6 +836,22 @@ async function afterLogin() {
     });
     const info = await resp.json();
     if (info.email) saveHint(info.email);
+
+    // ── Whitelist de usuarios autorizados ──────────────────────
+    const ALLOWED_EMAILS = [
+      'jponte@biomakers.net',
+      // Agregar más emails autorizados acá:
+      // 'otro@ejemplo.com',
+    ];
+    if (info.email && !ALLOWED_EMAILS.includes(info.email.toLowerCase())) {
+      document.getElementById('loading-overlay').style.display = 'none';
+      document.getElementById('login-screen').style.display  = 'flex';
+      setLoginStatus(`Acceso denegado para ${info.email}. Contactá al administrador.`, true);
+      handleLogout();
+      return;
+    }
+    // ────────────────────────────────────────────────────────────
+
     document.getElementById('user-name').textContent = info.name || 'Usuario';
     document.getElementById('user-email').textContent = info.email || '';
     const wrap = document.getElementById('user-avatar-wrap');
@@ -868,6 +913,7 @@ async function syncFromSheets() {
     valueRanges.forEach((vr, sheetIdx) => {
       const sheetName = sheetNames[sheetIdx];
       const rows = vr.values || [];
+      const COL = buildColMap(rows[0]); // detect columns from header row
       rows.forEach((row, rowIdx) => {
         if (rowIdx === 0) return; // skip header row
         const fecha = row[COL.fecha] || '';
@@ -1130,6 +1176,17 @@ function toast(msg, type='success') {
   t.innerHTML = `<span>${type==='success'?'✓':type==='info'?'ℹ':'✕'}</span> ${msg}`;
   c.appendChild(t);
   setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)}, 4000);
+}
+
+// Escapa caracteres HTML para prevenir XSS al renderizar datos de la planilla
+function htmlEsc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function setAltaFechaHoy() {
@@ -1605,10 +1662,10 @@ function renderConsulta() {
     const e=getEstado(i), rc=e==='baja'?'row-baja':'row-disponible';
     const uso=i.inicioConsumo?(i.finConsumo?`${i.inicioConsumo} → ${i.finConsumo}`:`Desde ${i.inicioConsumo}`):'—';
     return `<tr class="${rc}" data-id="${i.id}">
-      <td>${i.nombre}</td><td><span class="mono">${i.catalogo}</span></td>
-      <td><span class="lote-badge">${i.lote}</span></td><td>${yearBadge(getAnio(i))}</td>
+      <td>${htmlEsc(i.nombre)}</td><td><span class="mono">${htmlEsc(i.catalogo)}</span></td>
+      <td><span class="lote-badge">${htmlEsc(i.lote)}</span></td><td>${yearBadge(getAnio(i))}</td>
       <td>${fmtFecha(i.fecha)}</td><td>${fmtFecha(i.vencimiento)}</td>
-      <td>${tempBadge(i.tempAlmacen)}</td><td>${estadoBadge(i)}</td>
+      <td>${tempBadge(htmlEsc(i.tempAlmacen))}</td><td>${estadoBadge(i)}</td>
       <td style="font-size:12px;color:var(--mid)">${uso}</td>
     </tr>`;
   }).join('');

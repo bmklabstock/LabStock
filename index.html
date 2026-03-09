@@ -45,6 +45,9 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .nav-section-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#3a2e4a;padding:0 8px;margin:16px 0 6px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:6px;cursor:pointer;transition:all .15s;color:#8a9088;font-size:13px;font-weight:400;border:none;background:none;width:100%;text-align:left}
 .nav-item:hover{background:#1e1a23;color:#d0d4d1}
+.nav-item-subtle{opacity:.65;font-size:12px}
+.nav-item-subtle:hover{opacity:1}
+.nav-item-subtle.active{opacity:1}
 .nav-item.active{background:#2d1f42;color:#b98ee8;font-weight:500}
 .nav-icon{width:18px;height:18px;flex-shrink:0;opacity:.7}
 .nav-item.active .nav-icon{opacity:1}
@@ -445,6 +448,11 @@ mark{background:transparent;color:var(--accent);font-weight:700}
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       Consultas
     </button>
+    <div class="nav-section-label" style="margin-top:auto;padding-top:12px">Herramientas</div>
+    <button class="nav-item nav-item-subtle" onclick="showPage('bd')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      Base de datos
+    </button>
   </nav>
   <div class="sidebar-footer">
     <div class="user-chip">
@@ -785,6 +793,104 @@ mark{background:transparent;color:var(--accent);font-weight:700}
   </div>
 </div>
 
+<!-- BASE DE DATOS DE INSUMOS -->
+<div class="page" id="page-bd">
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Base de datos de insumos</div>
+      <div class="page-desc">Escaneá un código y completá los datos para que el programa lo reconozca automáticamente.</div>
+    </div>
+    <button class="btn btn-ghost" onclick="syncBD()" id="bd-sync-btn" style="font-size:12px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+      Recargar BD
+    </button>
+  </div>
+
+  <!-- Scanner -->
+  <div class="barcode-panel">
+    <div class="barcode-icon-wrap">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b98ee8" stroke-width="1.8">
+        <path d="M3 9V5a2 2 0 012-2h4M3 15v4a2 2 0 002 2h4M21 9V5a2 2 0 00-2-2h-4M21 15v4a2 2 0 01-2 2h-4"/>
+        <line x1="7" y1="4" x2="7" y2="20"/><line x1="10" y1="4" x2="10" y2="20"/>
+        <line x1="13" y1="4" x2="13" y2="20"/><line x1="16" y1="4" x2="16" y2="20"/>
+      </svg>
+    </div>
+    <div class="barcode-panel-body">
+      <div class="barcode-panel-title"><span class="barcode-pulse"></span> Escaneá el código del insumo</div>
+      <div class="barcode-input-row">
+        <input type="text" class="barcode-input" id="bd-barcode-input"
+          placeholder="Escaneá o escribí el código…"
+          oninput="onBDBarcode()" onkeydown="onBDBarcodeKey(event)"
+          autocomplete="off" spellcheck="false">
+        <button class="barcode-btn-clear" onclick="limpiarBD()">Limpiar</button>
+      </div>
+      <div class="barcode-status idle" id="bd-barcode-status">Listo — escaneá un código para comenzar</div>
+    </div>
+  </div>
+
+  <!-- Formulario -->
+  <div class="card">
+    <div class="card-title">Datos del insumo</div>
+    <div class="form-grid cols2">
+      <div class="field" style="grid-column:1/-1">
+        <label>Código escaneado (raw)</label>
+        <input type="text" id="bd-codigo-raw" placeholder="Se completa automáticamente al escanear" readonly
+          style="background:var(--surface2);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px">
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <label>Nombre del insumo</label>
+        <input type="text" id="bd-nombre" placeholder="Ej: Buffer RPE">
+      </div>
+      <div class="field">
+        <label>N° Catálogo</label>
+        <input type="text" id="bd-catalogo" placeholder="Ej: 19088">
+      </div>
+      <div class="field">
+        <label>N° Lote (ejemplo de este código)</label>
+        <input type="text" id="bd-lote" placeholder="Ej: A0123456">
+        <span class="hint">Usaremos este lote para aprender dónde está ubicado en el código.</span>
+      </div>
+      <div class="field">
+        <label>Temperatura de almacenamiento</label>
+        <select id="bd-temp">
+          <option value="15°C a 30°C">15°C a 30°C</option>
+          <option value="2°C a 8°C">2°C a 8°C</option>
+          <option value="-30°C a -10°C">-30°C a -10°C</option>
+          <option value="-25°C a -15°C">-25°C a -15°C</option>
+          <option value="-80°C">-80°C</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="guardarEnBD()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar en base de datos
+      </button>
+      <button class="btn btn-ghost" onclick="limpiarBD()">Limpiar</button>
+    </div>
+  </div>
+
+  <!-- Tabla BD -->
+  <div class="card">
+    <div class="card-title">Registros guardados <span id="bd-count" style="font-size:12px;font-weight:400;color:var(--dim)"></span></div>
+    <div class="table-wrap">
+      <table class="results-table">
+        <thead><tr>
+          <th>Nombre</th>
+          <th>N° Catálogo</th>
+          <th>N° Lote</th>
+          <th>Temp.</th>
+          <th style="max-width:220px">Código raw</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="bd-tbody">
+          <tr class="loading-row"><td colspan="6"><span class="spinner"></span>Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </main>
 </div>
 </div>
@@ -1087,6 +1193,8 @@ async function syncFromSheets() {
     setSyncState('ok', 'Sincronizado');
     toast(`✓ ${stock.length} insumos cargados de ${sheetNames.length} hoja${sheetNames.length!==1?'s':''}`);
     renderAll();
+    // Cargar BD en background para tenerla lista para el escáner
+    syncBD().catch(e => console.warn('BD sync error (non-critical):', e));
   } catch(e) {
     console.error(e);
     setSyncState('error', 'Error al sincronizar');
@@ -2434,6 +2542,9 @@ function processBarcodeCode(code, context = 'alta') {
 
   if (inputEl) { inputEl.classList.add('flash'); setTimeout(()=>inputEl.classList.remove('flash'), 400); }
 
+  // ── 0. Try BD lookup first (highest priority) ─────────────
+  if (context !== 'bd' && bdRecords.length && lookupBDAndFill(rawCode, context)) return;
+
   // ── 1. Try GS1 parse ──────────────────────────────────────
   let parsed = {};
   let catalogFromGS1 = '';
@@ -2551,6 +2662,10 @@ window.showPage = function(id) {
   _showPage(id);
   if (id === 'alta') setTimeout(() => { const b = document.getElementById('barcode-input'); if(b) b.focus(); }, 200);
   if (id === 'baja') setTimeout(() => { const b = document.getElementById('barcode-input-baja'); if(b) b.focus(); }, 200);
+  if (id === 'bd')   {
+    setTimeout(() => { const b = document.getElementById('bd-barcode-input'); if(b) b.focus(); }, 200);
+    if (!bdRecords.length) syncBD();
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -2868,6 +2983,290 @@ function limpiarFiltroPersonalizado() {
   fpUpdateBadge();
   fpRenderPills();
   renderConsulta();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BASE DE DATOS DE INSUMOS
+// ═══════════════════════════════════════════════════════════════
+const BD_SHEET = 'INSUMOS_BD';
+// BD_SHEET columns: A=codigo_raw, B=nombre, C=catalogo, D=lote, E=temp
+let bdRecords = []; // [{codigoRaw, nombre, catalogo, lote, temp, rowIndex}]
+let bdTimer   = null;
+
+// ── Ensure sheet exists ───────────────────────────────────────
+async function ensureBDSheet() {
+  const meta   = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+  const exists = meta.result.sheets.some(s => s.properties.title === BD_SHEET);
+  if (exists) return;
+  await gapi.client.sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SHEET_ID,
+    resource: { requests: [{ addSheet: { properties: { title: BD_SHEET, gridProperties: { rowCount: 2000, columnCount: 5 } } } }] }
+  });
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `${BD_SHEET}!A1:E1`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: [['Código raw', 'Nombre', 'N° Catálogo', 'N° Lote', 'Temperatura']] }
+  });
+}
+
+// ── Load BD from Sheets ───────────────────────────────────────
+async function syncBD() {
+  try {
+    await ensureBDSheet();
+    const resp = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `${BD_SHEET}!A2:E`
+    });
+    const rows = (resp.result.values || []);
+    bdRecords = rows.map((r, i) => ({
+      codigoRaw: (r[0] || '').trim(),
+      nombre:    (r[1] || '').trim(),
+      catalogo:  (r[2] || '').trim(),
+      lote:      (r[3] || '').trim(),
+      temp:      (r[4] || '').trim(),
+      rowIndex:  i + 2  // 1-based, skipping header
+    })).filter(r => r.codigoRaw);
+    renderBDTable();
+  } catch(e) {
+    console.error('syncBD error', e);
+    toast('Error al cargar base de datos', 'error');
+  }
+}
+
+// ── Lookup a raw code in BD ───────────────────────────────────
+// Returns match or null. Tries:
+//  1. Exact match on codigoRaw
+//  2. The stored raw code is a substring of the scanned code (same product, different lote)
+//  3. The scanned code contains the stored codigo as prefix/core
+function lookupInBD(rawCode) {
+  const raw = rawCode.trim();
+  // 1. Exact
+  let m = bdRecords.find(r => r.codigoRaw === raw);
+  if (m) return { record: m, extractedLote: m.lote };
+
+  // 2. Try to extract lote from new code using the stored example
+  // Find where the stored lote appears in the stored code, then extract same position in new code
+  for (const r of bdRecords) {
+    const extractedLote = extractLoteFromCode(raw, r.codigoRaw, r.lote);
+    if (extractedLote !== null) return { record: r, extractedLote };
+  }
+  return null;
+}
+
+// Learn lote position from example, apply to new code
+// storedCode: the original code scanned when registering
+// storedLote: the lote written by the user for that code
+// newCode: the new code being scanned now
+// Returns the lote extracted from newCode, or null if no structural match
+function extractLoteFromCode(newCode, storedCode, storedLote) {
+  if (!storedCode || !storedLote) return null;
+  const loteClean = storedLote.toUpperCase().replace(/\s+/g, '');
+  const codeUp    = storedCode.toUpperCase().replace(/\s+/g, '');
+  const newUp     = newCode.toUpperCase().replace(/\s+/g, '');
+
+  // Find where lote appears in the stored code
+  const loteIdx = codeUp.indexOf(loteClean);
+  if (loteIdx < 0) return null;
+
+  // Check that prefix (before lote) matches between stored and new code
+  const prefix = codeUp.substring(0, loteIdx);
+  if (!newUp.startsWith(prefix)) return null;
+
+  // Extract same-length slice from new code at same position
+  const extracted = newUp.substring(loteIdx, loteIdx + loteClean.length);
+  if (extracted.length !== loteClean.length) return null;
+
+  // If extracted == stored lote, it's the same lote — still useful
+  // Return it cleaned up preserving original casing from newCode
+  return newCode.substring(loteIdx, loteIdx + loteClean.length).trim();
+}
+
+// ── Scanner for BD page ───────────────────────────────────────
+function onBDBarcode() {
+  clearTimeout(bdTimer);
+  bdTimer = setTimeout(() => {
+    const val = document.getElementById('bd-barcode-input').value.trim();
+    if (val.length >= 3) processBDBarcodeCode(val);
+  }, 500);
+}
+
+function onBDBarcodeKey(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    clearTimeout(bdTimer);
+    const val = document.getElementById('bd-barcode-input').value.trim();
+    if (val) processBDBarcodeCode(val);
+  }
+}
+
+function processBDBarcodeCode(raw) {
+  const statusEl = document.getElementById('bd-barcode-status');
+  const rawEl    = document.getElementById('bd-codigo-raw');
+  const inputEl  = document.getElementById('bd-barcode-input');
+
+  if (inputEl) { inputEl.classList.add('flash'); setTimeout(()=>inputEl.classList.remove('flash'),400); }
+  rawEl.value = raw;
+
+  // Check if already in BD
+  const existing = bdRecords.find(r => r.codigoRaw === raw);
+  if (existing) {
+    statusEl.className = 'barcode-status found';
+    statusEl.textContent = `✓ Ya registrado: ${existing.nombre} (Cat: ${existing.catalogo})`;
+    document.getElementById('bd-nombre').value    = existing.nombre;
+    document.getElementById('bd-catalogo').value  = existing.catalogo;
+    document.getElementById('bd-lote').value      = existing.lote;
+    document.getElementById('bd-temp').value      = existing.temp || '15°C a 30°C';
+    toast('Código ya en BD — podés editar y guardar para actualizar', 'info');
+    return;
+  }
+
+  // Try GS1 parse to pre-fill what we can
+  const parsed = raw.length > 10 ? parseGS1(raw) : {};
+  const cat    = extractCatalog(parsed);
+  const lote   = (parsed.lot || '').trim().toUpperCase();
+
+  if (cat)  { document.getElementById('bd-catalogo').value = cat; flashFill('bd-catalogo'); }
+  if (lote) { document.getElementById('bd-lote').value     = lote; flashFill('bd-lote'); }
+
+  statusEl.className = 'barcode-status ' + (Object.keys(parsed).length ? 'warn' : 'idle');
+  statusEl.textContent = Object.keys(parsed).length
+    ? `GS1 detectado${cat?' · Cat:'+cat:''}${lote?' · Lote:'+lote:''} — completá los datos y guardá`
+    : 'Código registrado — completá los datos y guardá';
+}
+
+// ── Save to BD ────────────────────────────────────────────────
+async function guardarEnBD() {
+  const raw      = document.getElementById('bd-codigo-raw').value.trim();
+  const nombre   = document.getElementById('bd-nombre').value.trim();
+  const catalogo = document.getElementById('bd-catalogo').value.trim();
+  const lote     = document.getElementById('bd-lote').value.trim();
+  const temp     = document.getElementById('bd-temp').value;
+
+  if (!raw)    { toast('Escaneá un código primero', 'error'); return; }
+  if (!nombre) { toast('Completá el nombre del insumo', 'error'); return; }
+
+  try {
+    await ensureBDSheet();
+    const existing = bdRecords.find(r => r.codigoRaw === raw);
+
+    if (existing) {
+      // Update existing row
+      await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: `${BD_SHEET}!A${existing.rowIndex}:E${existing.rowIndex}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [[raw, nombre, catalogo, lote, temp]] }
+      });
+      toast('✓ Registro actualizado en BD', 'success');
+    } else {
+      // Append new row
+      await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: `${BD_SHEET}!A:E`,
+        valueInputOption: 'USER_ENTERED',
+        insertDataOption: 'INSERT_ROWS',
+        resource: { values: [[raw, nombre, catalogo, lote, temp]] }
+      });
+      toast('✓ Guardado en base de datos', 'success');
+    }
+    await syncBD();
+    limpiarBD();
+  } catch(e) {
+    console.error('guardarEnBD error', e);
+    toast('Error al guardar', 'error');
+  }
+}
+
+// ── Delete from BD ────────────────────────────────────────────
+async function eliminarDeBD(rowIndex, nombre) {
+  if (!confirm(`¿Eliminar "${nombre}" de la base de datos?`)) return;
+  try {
+    // Clear the row (don't delete to preserve rowIndex stability; syncBD filters empty)
+    await gapi.client.sheets.spreadsheets.values.clear({
+      spreadsheetId: SHEET_ID,
+      range: `${BD_SHEET}!A${rowIndex}:E${rowIndex}`
+    });
+    toast('✓ Eliminado de BD', 'success');
+    await syncBD();
+  } catch(e) {
+    toast('Error al eliminar', 'error');
+  }
+}
+
+// ── Render BD table ───────────────────────────────────────────
+function renderBDTable() {
+  const tbody   = document.getElementById('bd-tbody');
+  const countEl = document.getElementById('bd-count');
+  if (!tbody) return;
+  if (countEl) countEl.textContent = `— ${bdRecords.length} registro${bdRecords.length!==1?'s':''}`;
+
+  if (!bdRecords.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--dim);padding:32px">
+      Sin registros aún — escaneá un insumo y guardalo para comenzar</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = bdRecords.map(r => `
+    <tr>
+      <td>${htmlEsc(r.nombre)}</td>
+      <td>${htmlEsc(r.catalogo)}</td>
+      <td>${htmlEsc(r.lote)}</td>
+      <td><span class="temp-badge">${htmlEsc(r.temp)}</span></td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim)" title="${htmlEsc(r.codigoRaw)}">${htmlEsc(r.codigoRaw.length>40?r.codigoRaw.slice(0,40)+'…':r.codigoRaw)}</td>
+      <td><button class="btn btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--red)" onclick="eliminarDeBD(${r.rowIndex},'${r.nombre.replace(/'/g,"\\'")}')">Eliminar</button></td>
+    </tr>
+  `).join('');
+}
+
+// ── Clear BD form ─────────────────────────────────────────────
+function limpiarBD() {
+  ['bd-barcode-input','bd-codigo-raw','bd-nombre','bd-catalogo','bd-lote'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('bd-temp').value = '15°C a 30°C';
+  const s = document.getElementById('bd-barcode-status');
+  if (s) { s.className = 'barcode-status idle'; s.textContent = 'Listo — escaneá un código para comenzar'; }
+}
+
+// ── Hook BD lookup into processBarcodeCode ────────────────────
+// Called BEFORE GS1 parse — BD takes priority
+function lookupBDAndFill(rawCode, context) {
+  const match = lookupInBD(rawCode);
+  if (!match) return false;
+
+  const { record, extractedLote } = match;
+  const isSameLote = extractedLote === record.lote;
+
+  if (context === 'alta') {
+    const nombreEl  = document.getElementById('alta-nombre');
+    const catEl     = document.getElementById('alta-catalogo');
+    const loteEl    = document.getElementById('alta-lote');
+
+    if (nombreEl && !nombreEl.value.trim())  { nombreEl.value  = record.nombre;   flashFill('alta-nombre'); }
+    if (catEl    && !catEl.value.trim())     { catEl.value     = record.catalogo; flashFill('alta-catalogo'); }
+    if (loteEl   && !loteEl.value.trim() && extractedLote) { loteEl.value = extractedLote; flashFill('alta-lote'); }
+    inferAndSetTemp(record.catalogo, record.temp);
+
+    const statusEl = document.getElementById('barcode-status');
+    if (statusEl) {
+      statusEl.className = 'barcode-status found';
+      statusEl.textContent = `✓ BD: ${record.nombre} · Cat: ${record.catalogo}` +
+        (extractedLote && !isSameLote ? ` · Lote detectado: ${extractedLote}` : '');
+    }
+    toast('✓ Autocompletado desde base de datos', 'success');
+  } else if (context === 'baja') {
+    const q = extractedLote || record.catalogo || record.nombre;
+    const searchEl = document.getElementById('baja-search-input');
+    if (searchEl) { searchEl.value = q; buscarBaja(); }
+    const statusEl = document.getElementById('barcode-status-baja');
+    if (statusEl) {
+      statusEl.className = 'barcode-status found';
+      statusEl.textContent = `✓ BD: ${record.nombre} · buscando${extractedLote?' lote: '+extractedLote:''}…`;
+    }
+    toast(`✓ BD: ${record.nombre} — resultados abajo`, 'success');
+  }
+  return true;
 }
 
 // Close dropdowns on outside click

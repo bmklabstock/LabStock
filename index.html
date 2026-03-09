@@ -1250,7 +1250,7 @@ function renderDashboard() {
   document.getElementById('stat-baja').textContent  = filtered.filter(i=>getEstado(i)==='baja').length;
   document.getElementById('stat-vence').textContent = filtered.filter(i=>getEstado(i)==='vence').length;
   document.getElementById('stat-vencido').textContent = filtered.filter(i=>getEstado(i)==='vencido').length;
-  const sorted = [...filtered].sort((a,b)=>new Date(b.fecha.split('/').reverse().join('-'))-new Date(a.fecha.split('/').reverse().join('-'))).slice(0,10);
+  const sorted = [...filtered].sort((a,b)=>parseFecha(b.fecha)-parseFecha(a.fecha)).slice(0,10);
   document.getElementById('dash-tbody').innerHTML = sorted.length
     ? sorted.map(i=>`<tr>
         <td>${fmtFecha(i.fecha)}</td><td>${yearBadge(getAnio(i))}</td>
@@ -1850,15 +1850,16 @@ Esta acción no se puede deshacer.`)) return;
     });
     for (const [sheetName, rows] of Object.entries(bySheet)) {
       const sheetId = await getSheetId(sheetName);
+      // Sort descending so higher row indices delete first (avoids index shift)
       const sortedDesc = rows.slice().sort((a,b)=>b-a);
-      for (const row of sortedDesc) {
-        await gapi.client.sheets.spreadsheets.batchUpdate({
-          spreadsheetId: SHEET_ID,
-          resource: { requests: [{ deleteDimension: {
-            range: { sheetId, dimension: 'ROWS', startIndex: row - 1, endIndex: row }
-          }}]}
-        });
-      }
+      // Send all deletes in a single batchUpdate request
+      const requests = sortedDesc.map(row => ({ deleteDimension: {
+        range: { sheetId, dimension: 'ROWS', startIndex: row - 1, endIndex: row }
+      }}));
+      await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        resource: { requests }
+      });
     }
     toast(`🗑️ ${n} insumo${n>1?'s':''} eliminado${n>1?'s':''}`, 'success');
     consultaSelected.clear();

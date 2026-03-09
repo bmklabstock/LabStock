@@ -254,6 +254,11 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .modal-field input:focus,.modal-field select:focus{border-color:var(--accent)}
 .modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
 
+.temp-row{display:flex;gap:8px;align-items:stretch}
+.temp-row select{flex:1}
+.temp-custom{flex:1;padding:9px 12px;border:1.5px solid var(--accent);border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--text);background:var(--accent-l);outline:none;display:none;transition:all .15s}
+.temp-custom.show{display:block}
+
 /* BARCODE SCANNER */
 .barcode-panel{background:linear-gradient(135deg,#1e1228,#2d1f42);border:1.5px solid rgba(155,109,208,.3);border-radius:10px;padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px}
 .barcode-icon-wrap{width:44px;height:44px;background:rgba(107,63,160,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -471,13 +476,18 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
       </div>
       <div class="field">
         <label>Temperatura de almacenamiento</label>
-        <select id="alta-temp" onchange="updatePreview()">
-          <option value="15°C a 30°C">15°C a 30°C</option>
-          <option value="2°C a 8°C">2°C a 8°C</option>
-          <option value="-30°C a -10°C">-30°C a -10°C</option>
-          <option value="-25°C a -15°C">-25°C a -15°C</option>
-          <option value="-80°C">-80°C</option>
-        </select>
+        <div class="temp-row">
+          <select id="alta-temp" onchange="onAltaTempChange()">
+            <option value="15°C a 30°C">15°C a 30°C</option>
+            <option value="2°C a 8°C">2°C a 8°C</option>
+            <option value="-30°C a -10°C">-30°C a -10°C</option>
+            <option value="-25°C a -15°C">-25°C a -15°C</option>
+            <option value="-80°C">-80°C</option>
+            <option value="otra">Otra…</option>
+          </select>
+          <input type="text" class="temp-custom" id="temp-custom" placeholder="Ej: -196°C">
+        </div>
+        <span class="autofill-tag" id="tag-temp" style="display:none">❆ Temperatura inferida por mayoría de registros, comprobar si es la correcta</span>
       </div>
     </div>
   </div>
@@ -625,7 +635,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
       <div class="modal-field"><label>Vencimiento</label><input id="me-venc" type="date"></div>
       <div class="modal-field"><label>Temperatura</label>
         <select id="me-temp">
-          <option>15°C a 30°C</option><option>2°C a 8°C</option><option>-30°C a -10°C</option><option>-25°C a -15°C</option><option>-80°C</option>
+          <option>15°C a 30°C</option><option>2°C a 8°C</option><option>-30°C a -10°C</option><option>-25°C a -15°C</option><option>-80°C</option><option>Otra…</option>
         </select>
       </div>
       <div class="modal-field"><label>Inicio consumo</label><input id="me-inicio" type="date"></div>
@@ -1227,14 +1237,14 @@ function altaACSelect(field, idx) {
   if (tag) { tag.classList.add('show'); setTimeout(()=>tag.classList.remove('show'),3000); }
   flashFill('alta-'+field);
   const item = sug.item;
-  const tempMap = {'15°C a 30°C':0,'2°C a 8°C':1,'-30°C a -10°C':2,'-25°C a -15°C':3,'-80°C':4};
+  const TEMPS_LIST = ['15°C a 30°C','2°C a 8°C','-30°C a -10°C','-25°C a -15°C','-80°C'];
+  const tempMap = Object.fromEntries(TEMPS_LIST.map((t,i)=>[t,i]));
   // Always fill all related fields (overwrite if different insumo selected)
   const n = document.getElementById('alta-nombre');
   const c = document.getElementById('alta-catalogo');
-  const t = document.getElementById('alta-temp');
   if (field !== 'nombre') { n.value = item.nombre; flashFill('alta-nombre'); }
   if (field !== 'catalogo') { c.value = item.catalogo; flashFill('alta-catalogo'); }
-  if (item.tempAlmacen in tempMap) { t.selectedIndex = tempMap[item.tempAlmacen]; flashFill('alta-temp'); }
+  inferAndSetTemp(item.catalogo, item.tempAlmacen);
   if (field === 'lote') {
     const v = document.getElementById('alta-vencimiento');
     if (!v.value) { v.value = item.vencimiento; flashFill('alta-vencimiento'); }
@@ -1306,7 +1316,8 @@ async function confirmarAlta() {
   const cantidad = parseInt(document.getElementById('alta-cantidad').value)||1;
   const fecha    = document.getElementById('alta-fecha').value;
   const venc     = document.getElementById('alta-vencimiento').value;
-  const temp     = document.getElementById('alta-temp').value;
+  const tempSel  = document.getElementById('alta-temp');
+  const temp     = tempSel.value === 'otra' ? (document.getElementById('temp-custom').value.trim() || 'Otra') : tempSel.value;
 
   const sinVenc = document.getElementById('chk-sin-venc')?.checked;
   if (!nombre||!catalogo||!lote||!fecha||(!venc && !sinVenc)) {
@@ -1356,6 +1367,8 @@ function limpiarAlta() {
   const chkSV = document.getElementById('chk-sin-venc'); if(chkSV) chkSV.checked=false;
   document.getElementById('alta-cantidad').value=1;
   document.getElementById('alta-temp').selectedIndex=0;
+  const tcEl=document.getElementById('temp-custom'); if(tcEl){tcEl.classList.remove('show');tcEl.value='';}
+  const tagT=document.getElementById('tag-temp'); if(tagT) tagT.style.display='none';
   const el = document.getElementById('alta-fecha');
   const hoy = new Date();
   el.value = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
@@ -1757,6 +1770,68 @@ Esta acción no se puede deshacer.`)) return;
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// TEMPERATURA INTELIGENTE
+// ═══════════════════════════════════════════════════════════════
+const CANONICAL_TEMPS = [
+  { key:'15°C a 30°C',   re:/ambien|15.*(25|30)|16.*30|17.*30|18.*30|19.*30|room.?temp/i },
+  { key:'2°C a 8°C',     re:/helader|fridge|\b[24].?[\u2013-]?\s*8\b|\b2\s*a\s*8\b/i },
+  { key:'-30°C a -10°C', re:/-30.*-10|-10.*-3[0-9]|-2[0-9](?!.*-\d{2})/i },
+  { key:'-25°C a -15°C', re:/-25.*-15|-15.*-25/i },
+  { key:'-80°C',              re:/-80/i },
+];
+const TEMPS_KEYS = CANONICAL_TEMPS.map(c => c.key);
+
+function normalizeTemp(raw) {
+  if (!raw) return null;
+  const s = raw.toString().trim();
+  if (/^\d{4}-\d{2}|^NA$/i.test(s)) return null;
+  for (const c of CANONICAL_TEMPS) {
+    if (c.re.test(s)) return c.key;
+  }
+  return null;
+}
+
+function setAltaTemp(val) {
+  const sel = document.getElementById('alta-temp');
+  const cus = document.getElementById('temp-custom');
+  const tag = document.getElementById('tag-temp');
+  const idx = TEMPS_KEYS.indexOf(val);
+  if (idx >= 0) {
+    sel.selectedIndex = idx;
+    cus.classList.remove('show');
+  } else if (val) {
+    sel.value = 'otra';
+    cus.classList.add('show');
+    cus.value = val;
+  }
+  flashFill('alta-temp');
+  if (tag) { tag.style.display = 'inline'; }
+}
+
+function inferAndSetTemp(catalogo, fallbackRaw) {
+  // Try to infer from all stock items with same catalogo
+  const matches = stock.filter(i => i.catalogo.toLowerCase() === (catalogo||'').toLowerCase());
+  const counts = {};
+  for (const i of matches) {
+    const n = normalizeTemp(i.tempAlmacen);
+    if (n) counts[n] = (counts[n]||0) + 1;
+  }
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const winner = sorted[0]?.[0] || normalizeTemp(fallbackRaw);
+  if (winner) setAltaTemp(winner);
+}
+
+function onAltaTempChange() {
+  const sel = document.getElementById('alta-temp');
+  const cus = document.getElementById('temp-custom');
+  const tag = document.getElementById('tag-temp');
+  if (sel.value === 'otra') { cus.classList.add('show'); cus.focus(); }
+  else cus.classList.remove('show');
+  if (tag) tag.style.display = 'none'; // user overrode — hide hint
+  updatePreview();
+}
+
 // BARCODE / QR SCANNER
 let barcodeTimer = null;
 
@@ -1788,14 +1863,15 @@ function processBarcodeCode(code) {
     stock.find(i => i.lote.toLowerCase() === codeLow) ||
     stock.find(i => i.catalogo.toLowerCase().includes(codeLow)) ||
     stock.find(i => i.nombre.toLowerCase().includes(codeLow));
-  const tempMap = {'15°C a 30°C':0,'2°C a 8°C':1,'-30°C a -10°C':2,'-25°C a -15°C':3,'-80°C':4};
+  const TEMPS_LIST = ['15°C a 30°C','2°C a 8°C','-30°C a -10°C','-25°C a -15°C','-80°C'];
+  const tempMap = Object.fromEntries(TEMPS_LIST.map((t,i)=>[t,i]));
   if (match) {
     document.getElementById('alta-nombre').value = match.nombre;
     document.getElementById('alta-catalogo').value = match.catalogo;
     const loteEl = document.getElementById('alta-lote');
     if (!loteEl.value.trim()) loteEl.value = match.lote.replace(/\s+[A-Z]{1,3}$/, '').trim();
     const temp = document.getElementById('alta-temp');
-    if (match.tempAlmacen in tempMap) temp.selectedIndex = tempMap[match.tempAlmacen];
+    inferAndSetTemp(match.catalogo, match.tempAlmacen);
     ['alta-nombre','alta-catalogo','alta-lote'].forEach(flashFill);
     const el = document.getElementById('barcode-status');
     el.className = 'barcode-status found';

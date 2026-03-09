@@ -147,7 +147,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 /* BAJA SEARCH UNIFIED */
 .baja-search-wrap{position:relative}
 .baja-search-wrap .search-icon-abs{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--dim);pointer-events:none}
-.baja-search-unified{width:100%;padding:10px 12px 10px 38px;border:1.5px solid var(--border);border-radius:8px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s,box-shadow .15s}
+.baja-search-unified{width:100%;padding:10px 12px 10px 38px !important;border:1.5px solid var(--border);border-radius:8px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s,box-shadow .15s}
 .baja-search-unified:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-l)}
 .baja-match-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0}
 .baja-match-exacto{background:var(--accent-l);color:var(--accent)}
@@ -849,7 +849,7 @@ let nextLocalId   = 1;
 let bajaSelectedId = null;
 let consultaFilter = 'todos';
 let consultaQuery  = '';
-let consultaSort   = { col: 'fecha', dir: 'desc' }; // columna y dirección de ordenamiento
+let consultaSort   = { col: 'anio', dir: 'desc' }; // columna y dirección de ordenamiento
 let dashYear       = 'todos';
 let consultaYear   = 'todos'; // se actualiza al año más reciente al cargar
 const altaSugs     = {nombre:[], catalogo:[], lote:[]};
@@ -1086,8 +1086,6 @@ async function syncFromSheets() {
     // consultaYear permanece en 'todos' por defecto
     setSyncState('ok', 'Sincronizado');
     toast(`✓ ${stock.length} insumos cargados de ${sheetNames.length} hoja${sheetNames.length!==1?'s':''}`);
-    // Default consultas al año más reciente
-    if (sheetNames.length) consultaYear = sheetNames[sheetNames.length - 1];
     renderAll();
   } catch(e) {
     console.error(e);
@@ -1917,7 +1915,11 @@ function renderConsulta() {
       else if (col==='vencimiento'){ return mult*(parseFecha(a.vencimiento)-parseFecha(b.vencimiento)); }
       else if (col==='estado') { va=getEstado(a);  vb=getEstado(b); }
       else { return mult*(parseFecha(a.fecha)-parseFecha(b.fecha)); }
-      return mult * va.localeCompare(vb);
+      const cmp = mult * va.localeCompare(vb);
+      // Cuando ordena por año, usar fecha como criterio secundario (más reciente primero)
+      if (cmp !== 0) return cmp;
+      if (col === 'anio') return parseFecha(b.fecha) - parseFecha(a.fecha);
+      return 0;
     });
   }
 
@@ -1976,26 +1978,47 @@ function updateConsultaActions() {
 document.addEventListener('DOMContentLoaded', () => {
   const tbody = document.getElementById('consulta-tbody');
   if (!tbody) return;
+  // Track mousedown position to distinguish click vs drag (for text selection)
+  let _mouseDownX = 0, _mouseDownY = 0, _mouseDownTimer = null;
   tbody.addEventListener('mousedown', e => {
     const tr = e.target.closest('tr[data-id]');
     if (!tr) return;
-    e.preventDefault();
+    // Allow shift/ctrl+click to work immediately with preventDefault
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const rows = getConsultaRows();
+      const idx  = rows.indexOf(tr);
+      const id   = parseInt(tr.dataset.id);
+      if (e.shiftKey && consultaLastIdx !== null) {
+        const from = Math.min(consultaLastIdx, idx);
+        const to   = Math.max(consultaLastIdx, idx);
+        rows.forEach((r, i) => { if (i >= from && i <= to) setRowSelected(r, true); });
+      } else {
+        setRowSelected(tr, !consultaSelected.has(id));
+        consultaLastIdx = idx;
+      }
+      updateConsultaActions();
+      return;
+    }
+    // For plain click: record position, wait for mouseup to distinguish click vs text-select drag
+    _mouseDownX = e.clientX;
+    _mouseDownY = e.clientY;
+  });
+  tbody.addEventListener('mouseup', e => {
+    const tr = e.target.closest('tr[data-id]');
+    if (!tr) return;
+    if (e.shiftKey || e.ctrlKey || e.metaKey) return; // already handled above
+    const dx = Math.abs(e.clientX - _mouseDownX);
+    const dy = Math.abs(e.clientY - _mouseDownY);
+    // If mouse moved more than 4px, user is selecting text — don't toggle row
+    if (dx > 4 || dy > 4) return;
     const rows = getConsultaRows();
     const idx  = rows.indexOf(tr);
     const id   = parseInt(tr.dataset.id);
-    if (e.shiftKey && consultaLastIdx !== null) {
-      const from = Math.min(consultaLastIdx, idx);
-      const to   = Math.max(consultaLastIdx, idx);
-      rows.forEach((r, i) => { if (i >= from && i <= to) setRowSelected(r, true); });
-    } else if (e.ctrlKey || e.metaKey) {
-      setRowSelected(tr, !consultaSelected.has(id));
-      consultaLastIdx = idx;
-    } else {
-      const onlyThis = consultaSelected.size === 1 && consultaSelected.has(id);
-      rows.forEach(r => setRowSelected(r, false));
-      if (!onlyThis) { setRowSelected(tr, true); consultaLastIdx = idx; }
-      else           { consultaLastIdx = null; }
-    }
+    const onlyThis = consultaSelected.size === 1 && consultaSelected.has(id);
+    rows.forEach(r => setRowSelected(r, false));
+    if (!onlyThis) { setRowSelected(tr, true); consultaLastIdx = idx; }
+    else           { consultaLastIdx = null; }
     updateConsultaActions();
   });
 });

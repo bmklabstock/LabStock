@@ -91,8 +91,8 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 
 /* ALERT BANNERS */
 .alert-banner{border-radius:10px;padding:14px 18px;display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
-.alert-banner.amber{background:var(--amber-l);border:1px solid #e8c060}
-.alert-banner.red{background:var(--red-l);border:1px solid #e8a090}
+.alert-banner.amber{background:var(--amber-l);border:1px solid var(--amber)}
+.alert-banner.red{background:var(--red-l);border:1px solid var(--red)}
 .alert-banner-icon{font-size:18px;flex-shrink:0;margin-top:1px}
 .alert-banner-body{flex:1}
 .alert-banner-title{font-size:13px;font-weight:600;margin-bottom:4px}
@@ -186,8 +186,8 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 .badge-baja::before{background:var(--red)}
 .badge-vence{background:var(--amber-l);color:var(--amber)}
 .badge-vence::before{background:var(--amber)}
-.badge-vencido{background:#2a1a1a;color:#e05050}
-.badge-vencido::before{background:#e05050}
+.badge-vencido{background:var(--red-l);color:var(--red)}
+.badge-vencido::before{background:var(--red)}
 
 /* YEAR TABS */
 .year-tabs-bar{display:flex;align-items:center;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border);overflow-x:auto}
@@ -221,7 +221,7 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 .results-table{width:100%;border-collapse:collapse;font-size:13px}
 .results-table th{background:var(--surface2);padding:9px 12px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--mid);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:1}
 .results-table td{padding:10px 12px;border-bottom:1px solid var(--border2);vertical-align:middle}
-.results-table tr.row-disponible:hover td{background:#f7f2fd}
+.results-table tr.row-disponible:hover td{background:var(--accent-l)}
 .results-table tr.row-baja td{opacity:.7}
 .results-table tr.row-baja:hover td{background:var(--red-l);opacity:1}
 .table-wrap{max-height:460px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
@@ -238,7 +238,7 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 .insumo-row-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .insumo-row-cols{display:flex;gap:28px;align-items:center;flex-shrink:0}
 .insumo-row-col{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
-.insumo-row-col-label{font-size:11px;color:#4a2070;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.insumo-row-col-label{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .insumo-row-col-val{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;color:var(--text)}
 .insumo-row-divider{width:1px;height:32px;background:var(--border)}
 .check-circle{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
@@ -264,7 +264,7 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 .toast{display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);animation:toastIn .3s ease;max-width:360px}
 .toast-success{background:var(--accent);color:#fff}
 .toast-error{background:var(--red);color:#fff}
-.toast-info{background:#1a4a8a;color:#fff}
+.toast-info{background:var(--blue);color:#fff}
 .toast.out{animation:toastOut .3s ease forwards}
 @keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 @keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateX(20px)}}
@@ -292,9 +292,9 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 .consulta-actions.show{display:flex}
 .consulta-sel-count{font-size:13px;color:var(--mid);flex:1}
 .btn-modificar{padding:9px 18px;background:var(--accent-l);border:1.5px solid rgba(107,63,160,.3);border-radius:7px;color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .15s}
-.btn-modificar:hover{background:#e4d6f7;border-color:var(--accent)}
-.btn-eliminar{padding:9px 18px;background:#fff0f0;border:1.5px solid rgba(200,40,40,.3);border-radius:7px;color:#c02828;font-weight:600;font-size:13px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .15s}
-.btn-eliminar:hover{background:#ffe0e0;border-color:#c02828}
+.btn-modificar:hover{background:var(--accent-l);border-color:var(--accent)}
+.btn-eliminar{padding:9px 18px;background:var(--red-l);border:1.5px solid rgba(200,40,40,.3);border-radius:7px;color:var(--red);font-weight:600;font-size:13px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .15s}
+.btn-eliminar:hover{background:var(--red-l);border-color:var(--red);filter:brightness(1.1)}
 /* Modal edición */
 /* HISTORY */
 .history-list{display:flex;flex-direction:column}
@@ -352,7 +352,7 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 .btn-filtro-custom.active{background:var(--accent);color:#fff}
 .filtro-badge{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:18px;text-align:center;display:none}
 .active-filter-pills{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;min-height:0}
-.filter-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--accent-l);color:var(--accent);border:1px solid #d4bef0}
+.filter-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--accent-l);color:var(--accent);border:1px solid var(--accent-d)}
 .filter-pill button{background:none;border:none;cursor:pointer;color:var(--accent);font-size:13px;line-height:1;padding:0;opacity:.7}
 .filter-pill button:hover{opacity:1}
 .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:500;display:none}

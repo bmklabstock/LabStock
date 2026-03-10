@@ -3464,7 +3464,8 @@ function processBDBarcodeCode(raw) {
   if (inputEl) { inputEl.classList.add('flash'); setTimeout(()=>inputEl.classList.remove('flash'),400); }
   rawEl.value = raw;
 
-  // Check if already in BD — alert prominently
+  // Check if already in BD — alert if this catalogue already has a raw code registered
+  // (different units of the same product may have different raw codes, only one needed)
   const existing = bdRecords.find(r => r.codigoRaw === raw);
   if (existing) {
     statusEl.className = 'barcode-status found';
@@ -3475,10 +3476,11 @@ function processBDBarcodeCode(raw) {
     const bdChkEx = document.getElementById('bd-chk-sin-venc');
     if (bdChkEx) { bdChkEx.checked = existing.vencimiento?.toUpperCase() === 'NA'; toggleBDSinVenc(bdChkEx); }
     document.getElementById('bd-vencimiento').value = (existing.vencimiento?.toUpperCase() === 'NA') ? '' : (existing.vencimiento || '');
-    // Show a persistent warning toast
     toast(`⚠️ Este código ya está en la BD: ${existing.nombre}`, 'error');
     return;
   }
+  // Also warn if the same catalogue already has a different raw code registered
+  // (after BD lookup fills the fields, we can check by catalogo)
 
   // Try GS1 parse to pre-fill what we can
   const parsed = raw.length > 10 ? parseGS1(raw) : {};
@@ -3489,6 +3491,18 @@ function processBDBarcodeCode(raw) {
   if (cat)  { document.getElementById('bd-catalogo').value    = cat;  flashFill('bd-catalogo'); }
   if (lote) { document.getElementById('bd-lote').value        = lote; flashFill('bd-lote'); }
   if (venc) { document.getElementById('bd-vencimiento').value = venc; flashFill('bd-vencimiento'); }
+
+  // Check if this catalogue already has a raw code registered (different unit, same product)
+  const catFinal = cat || document.getElementById('bd-catalogo').value.trim();
+  if (catFinal) {
+    const dupCat = bdRecords.find(r => r.codigoRaw && stripAI(r.catalogo).toLowerCase() === stripAI(catFinal).toLowerCase());
+    if (dupCat) {
+      statusEl.className = 'barcode-status notfound';
+      statusEl.textContent = `⚠️ Este catálogo ya tiene un código RAW registrado: ${dupCat.nombre}`;
+      toast(`⚠️ Catálogo ya registrado en BD: ${dupCat.nombre}`, 'error');
+      return;
+    }
+  }
 
   statusEl.className = 'barcode-status ' + (Object.keys(parsed).length ? 'warn' : 'idle');
   statusEl.textContent = Object.keys(parsed).length
@@ -3510,7 +3524,12 @@ async function guardarEnBD() {
 
   try {
     await ensureBDSheet();
-    const existing = bdRecords.find(r => r.codigoRaw === raw);
+    // First try exact match by raw code
+    let existing = bdRecords.find(r => r.codigoRaw === raw);
+    // If not found, look for a pre-populated row (no raw code) with same catalogo
+    if (!existing && catalogo) {
+      existing = bdRecords.find(r => !r.codigoRaw && stripAI(r.catalogo).toLowerCase() === stripAI(catalogo).toLowerCase());
+    }
 
     if (existing) {
       // Update existing row

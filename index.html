@@ -1986,8 +1986,13 @@ function renderConsulta() {
 
   // ── Filtros personalizados ──────────────────────────────────
   if (fpFiltros.estados.size)   items = items.filter(i => fpFiltros.estados.has(getEstado(i)));
-  if (fpFiltros.catalogos.size) items = items.filter(i => fpFiltros.catalogos.has(i.catalogo));
-  if (fpFiltros.nombres.size)   items = items.filter(i => fpFiltros.nombres.has(i.nombre));
+  // Catálogo y nombre se combinan como OR: pasa si coincide con algún catálogo O algún nombre seleccionado
+  if (fpFiltros.catalogos.size || fpFiltros.nombres.size) {
+    items = items.filter(i =>
+      (fpFiltros.catalogos.size && fpFiltros.catalogos.has(i.catalogo)) ||
+      (fpFiltros.nombres.size   && fpFiltros.nombres.has(i.nombre))
+    );
+  }
   if (fpFiltros.lotes.size)     items = items.filter(i => fpFiltros.lotes.has(i.lote));
   if (fpFiltros.temps.size)     items = items.filter(i => fpFiltros.temps.has(i.tempAlmacen));
   if (fpFiltros.fechaDesde || fpFiltros.fechaHasta) {

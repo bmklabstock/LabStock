@@ -1800,7 +1800,9 @@ function updatePreview() {
   }
   let rows = '';
   for (let i=0; i<cantidad; i++) {
-    const loteCompleto = lote ? `${lote} ${getLetter(i)}` : getLetter(i);
+    const loteCompleto = cantidad > 1
+      ? (lote ? `${lote} ${getLetter(i)}` : getLetter(i))
+      : lote || '—';
     rows += `<tr class="preview-row-new">
       <td>${fmtFecha(fecha)||'—'}</td><td>${nombre||'—'}</td>
       <td><span class="mono">${catalogo||'—'}</span></td>
@@ -1841,7 +1843,7 @@ async function confirmarAlta() {
       rows.push([
         toSheetDate(fecha),
         nombre, catalogo,
-        `${lote} ${getLetter(i)}`,
+        cantidad > 1 ? `${lote} ${getLetter(i)}` : lote,
         sinVenc ? 'NA' : toSheetDate(venc),
         '', '', temp, '', ''
       ]);

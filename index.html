@@ -531,16 +531,16 @@ mark{background:transparent;color:var(--accent);font-weight:700}
   </div>
   <div class="card">
     <div class="card-title">Datos del insumo</div>
-    <div class="form-grid cols2">
+    <div class="form-grid cols3">
       <div class="field" style="grid-column:1/-1">
         <label>Nombre del insumo</label>
         <div class="field-wrap">
-          <input type="text" id="alta-nombre" placeholder="Ej: 2X Oncomine Focus DNA Assay" oninput="altaAC('nombre')" autocomplete="off">
+          <input type="text" id="alta-nombre" placeholder="Ej: 2X Oncomine Focus DNA Assay, Chef-Ready" oninput="altaAC('nombre')" autocomplete="off">
           <div class="alta-ac-list" id="ac-nombre"></div>
         </div>
         <span class="autofill-tag" id="tag-nombre">✦ Autocompletado desde stock</span>
       </div>
-      <div class="field">
+      <div class="field" style="grid-column:span 2">
         <label>N° Catálogo</label>
         <div class="field-wrap">
           <input type="text" id="alta-catalogo" placeholder="Ej: A42006" oninput="altaAC('catalogo')" autocomplete="off">
@@ -549,6 +549,10 @@ mark{background:transparent;color:var(--accent);font-weight:700}
         <span class="autofill-tag" id="tag-catalogo">✦ Autocompletado desde stock</span>
       </div>
       <div class="field">
+        <label>Cantidad de unidades</label>
+        <input type="number" id="alta-cantidad" min="1" value="1" oninput="updatePreview()">
+      </div>
+      <div class="field" style="grid-column:span 2">
         <label>N° Lote (base)</label>
         <div class="field-wrap">
           <input type="text" id="alta-lote" placeholder="Ej: 2409037" oninput="altaAC('lote')" autocomplete="off">
@@ -558,14 +562,10 @@ mark{background:transparent;color:var(--accent);font-weight:700}
         <span class="autofill-tag" id="tag-lote">✦ Autocompletado desde stock</span>
       </div>
       <div class="field">
-        <label>Cantidad de unidades</label>
-        <input type="number" id="alta-cantidad" min="1" value="1" oninput="updatePreview()">
-      </div>
-      <div class="field">
         <label>Fecha de llegada</label>
         <input type="date" id="alta-fecha" oninput="updatePreview()">
       </div>
-      <div class="field">
+      <div class="field" style="grid-column:span 2">
         <label>Fecha de vencimiento</label>
         <input type="date" id="alta-vencimiento" oninput="updatePreview(); document.getElementById('chk-sin-venc').checked=false;">
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mid);margin-top:6px;cursor:pointer;font-weight:400">
@@ -575,7 +575,6 @@ mark{background:transparent;color:var(--accent);font-weight:700}
       </div>
       <div class="field">
         <label>Temperatura de almacenamiento</label>
-        <div class="temp-row">
           <select id="alta-temp" onchange="onAltaTempChange()">
             <option value="15°C a 30°C">15°C a 30°C</option>
             <option value="2°C a 8°C">2°C a 8°C</option>
@@ -837,7 +836,7 @@ mark{background:transparent;color:var(--accent);font-weight:700}
   <!-- Formulario -->
   <div class="card">
     <div class="card-title">Datos del insumo</div>
-    <div class="form-grid cols2">
+    <div class="form-grid cols3">
       <div class="field" style="grid-column:1/-1">
         <label>Código escaneado (raw)</label>
         <input type="text" id="bd-codigo-raw" placeholder="Se completa automáticamente al escanear" readonly
@@ -850,14 +849,14 @@ mark{background:transparent;color:var(--accent);font-weight:700}
           <div class="alta-ac-list" id="bd-ac-nombre"></div>
         </div>
       </div>
-      <div class="field">
+      <div class="field" style="grid-column:span 2">
         <label>N° Catálogo</label>
         <div class="field-wrap">
           <input type="text" id="bd-catalogo" placeholder="Ej: 19088" oninput="bdAC('catalogo')" autocomplete="off">
           <div class="alta-ac-list" id="bd-ac-catalogo"></div>
         </div>
       </div>
-      <div class="field">
+      <div class="field" style="grid-column:span 2">
         <label>N° Lote (ejemplo de este código)</label>
         <div class="field-wrap">
           <input type="text" id="bd-lote" placeholder="Ej: A0123456" oninput="bdAC('lote')" autocomplete="off">
@@ -3046,7 +3045,7 @@ async function syncBD() {
       lote:       (r[3] || '').trim(),
       vencimiento:(r[4] || '').trim(),
       rowIndex:   i + 2
-    })).filter(r => r.codigoRaw);
+    })).filter(r => r.nombre || r.catalogo); // incluir filas pre-pobladas sin código raw
     renderBDTable();
   } catch(e) {
     console.error('syncBD error', e);

@@ -1013,6 +1013,9 @@ let consultaQuery  = '';
 let consultaSort   = { col: 'anio', dir: 'desc' }; // columna y dirección de ordenamiento
 let dashYear       = 'todos';
 let consultaYear   = 'todos'; // se actualiza al año más reciente al cargar
+const CONSULTA_PAGE_SIZE = 150;
+let consultaPage   = 0; // current page (0-indexed)
+let consultaTotalItems = 0; // total after filters
 const altaSugs     = {nombre:[], catalogo:[], lote:[]};
 let tokenClient;
 let gapiReady = false;
@@ -1246,20 +1249,42 @@ async function syncFromSheets() {
         if (rowIdx === 0) return; // skip header row
         const fecha = row[COL.fecha] || '';
         if (!fecha) return; // skip empty rows
+        const _venc = row[COL.vencimiento] || '';
+        const _fecha = fecha;
+        const _finConsumo = row[COL.finConsumo] || '';
+        // Precalculate timestamps for fast sorting/filtering
+        const _fechaTs = _parseFechaTs(_fecha);
+        const _vencTs  = _parseFechaTs(_venc);
+        // Precalculate estado for fast filtering
+        let _estado;
+        if (_finConsumo.trim()) {
+          _estado = 'baja';
+        } else if (!_venc || _venc.toUpperCase() === 'NA') {
+          _estado = 'disponible';
+        } else {
+          const now = Date.now();
+          const soon = now + 90*24*60*60*1000;
+          _estado = _vencTs === 0 ? 'disponible' : _vencTs < now ? 'vencido' : _vencTs < soon ? 'vence' : 'disponible';
+        }
+        const _nombre = (row[COL.nombre] || '').toLowerCase();
+        const _cat    = (row[COL.catalogo] || '').toLowerCase();
+        const _lot    = (row[COL.lote] || '').toLowerCase();
         stock.push({
           id: nextLocalId++,
           sheetName,
           rowIndex: rowIdx + 1, // 1-based, accounting for header
-          fecha:          fecha,
+          fecha:          _fecha,
           nombre:         row[COL.nombre]       || '',
           catalogo:       row[COL.catalogo]     || '',
           lote:           row[COL.lote]         || '',
-          vencimiento:    row[COL.vencimiento]  || '',
+          vencimiento:    _venc,
           inicioConsumo:  row[COL.inicioConsumo]|| '',
-          finConsumo:     row[COL.finConsumo]   || '',
+          finConsumo:     _finConsumo,
           tempAlmacen:    row[COL.tempAlmacen]  || 'Ambiente',
           rendimiento:    row[COL.rendimiento]  || '',
           obs:            row[COL.obs]          || '',
+          // Precalculated for performance
+          _fechaTs, _vencTs, _estado, _nombre, _cat, _lot,
         });
       });
     });
@@ -1446,6 +1471,7 @@ function getAnio(item) { return item.sheetName || item.fecha?.substring(0,4) || 
 function getAnios() { return [...new Set(stock.map(getAnio))].sort(); }
 
 function getEstado(item) {
+  if (item._estado) return item._estado; // use cached value
   // Considerar dado de baja si tiene fecha de fin o "NA"
   const fin = (item.finConsumo || '').trim();
   if (fin) return 'baja';
@@ -1993,16 +2019,28 @@ function cancelarBaja() {
 // ═══════════════════════════════════════════════════════════════
 // CONSULTAS
 // ═══════════════════════════════════════════════════════════════
-function setConsultaYear(año) { consultaYear=año; renderConsulta(); }
+function setConsultaPage(p) {
+  const totalPages = Math.ceil(consultaTotalItems / CONSULTA_PAGE_SIZE);
+  consultaPage = Math.max(0, Math.min(p, totalPages - 1));
+  renderConsulta();
+  // Scroll table into view
+  const el = document.getElementById('consulta-year-tabs');
+  if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function setConsultaYear(año) { consultaYear=año; consultaPage=0; renderConsulta(); }
 function setFilter(f,btn) {
-  consultaFilter=f;
+  consultaFilter=f; consultaPage=0;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderConsulta();
 }
+let _buscarTimer = null;
 function buscarConsulta() {
   consultaQuery=document.getElementById('consulta-input').value.trim().toLowerCase();
-  renderACConsulta(); renderConsulta();
+  consultaPage = 0;
+  renderACConsulta();
+  clearTimeout(_buscarTimer);
+  _buscarTimer = setTimeout(renderConsulta, 180);
 }
 function renderACConsulta() {
   const q=consultaQuery, list=document.getElementById('ac-list');
@@ -2034,9 +2072,22 @@ document.addEventListener('click',e=>{
   if(!e.target.closest('.search-wrap')) document.getElementById('ac-list')?.classList.remove('show');
 });
 
+// Fast timestamp parser used at load time for caching
+function _parseFechaTs(str) {
+  if (!str || str.toUpperCase() === 'NA') return 0;
+  if (str.includes('/')) {
+    const [d,m,y] = str.split('/');
+    if (!y || y.length < 4) return 0;
+    const t = new Date(y+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0')).getTime();
+    return isNaN(t) ? 0 : t;
+  }
+  const t = new Date(str).getTime();
+  return isNaN(t) ? 0 : t;
+}
+
 function parseFecha(str) {
   if (!str) return new Date(0);
-  if (str.includes('/')) { const [d,m,y]=str.split('/'); return new Date(`${y}-${m}-${d}`); }
+  if (str.includes('/')) { const [d,m,y]=str.split('/'); return new Date(y+'-'+m+'-'+d); }
   return new Date(str);
 }
 
@@ -2047,6 +2098,7 @@ function sortConsulta(col) {
     consultaSort.col = col;
     consultaSort.dir = 'asc';
   }
+  consultaPage = 0;
   renderConsulta();
 }
 
@@ -2054,9 +2106,9 @@ function renderConsulta() {
   renderYearTabs('consulta-year-tabs', consultaYear, 'setConsultaYear');
   let items = consultaYear==='todos' ? stock : stock.filter(i=>getAnio(i)===consultaYear);
   if (consultaQuery) items=items.filter(i=>
-    i.nombre.toLowerCase().includes(consultaQuery)||
-    i.catalogo.toLowerCase().includes(consultaQuery)||
-    i.lote.toLowerCase().includes(consultaQuery));
+    i._nombre.includes(consultaQuery)||
+    i._cat.includes(consultaQuery)||
+    i._lot.includes(consultaQuery));
   if (consultaFilter!=='todos') items=items.filter(i=>getEstado(i)===consultaFilter);
 
   // ── Filtros personalizados ──────────────────────────────────
@@ -2071,25 +2123,25 @@ function renderConsulta() {
   if (fpFiltros.lotes.size)     items = items.filter(i => fpFiltros.lotes.has(i.lote));
   if (fpFiltros.temps.size)     items = items.filter(i => fpFiltros.temps.has(i.tempAlmacen));
   if (fpFiltros.fechaDesde || fpFiltros.fechaHasta) {
-    const desde = fpFiltros.fechaDesde ? new Date(fpFiltros.fechaDesde) : null;
-    const hasta = fpFiltros.fechaHasta ? new Date(fpFiltros.fechaHasta + 'T23:59:59') : null;
+    const desde = fpFiltros.fechaDesde ? new Date(fpFiltros.fechaDesde).getTime() : null;
+    const hasta = fpFiltros.fechaHasta ? new Date(fpFiltros.fechaHasta + 'T23:59:59').getTime() : null;
     items = items.filter(i => {
-      const d = parseFecha(i.fecha);
-      if (!d || isNaN(d) || d.getTime() === 0) return false; // fecha inválida → excluir
-      if (desde && d < desde) return false;
-      if (hasta && d > hasta) return false;
+      const ts = i._fechaTs;
+      if (!ts) return false;
+      if (desde && ts < desde) return false;
+      if (hasta && ts > hasta) return false;
       return true;
     });
   }
   if (fpFiltros.vencDesde || fpFiltros.vencHasta) {
-    const desde = fpFiltros.vencDesde ? new Date(fpFiltros.vencDesde) : null;
-    const hasta = fpFiltros.vencHasta ? new Date(fpFiltros.vencHasta + 'T23:59:59') : null;
+    const desde = fpFiltros.vencDesde ? new Date(fpFiltros.vencDesde).getTime() : null;
+    const hasta = fpFiltros.vencHasta ? new Date(fpFiltros.vencHasta + 'T23:59:59').getTime() : null;
     items = items.filter(i => {
       if (!i.vencimiento || i.vencimiento.toUpperCase() === 'NA') return false;
-      const d = parseFecha(i.vencimiento);
-      if (!d || isNaN(d) || d.getTime() === 0) return false;
-      if (desde && d < desde) return false;
-      if (hasta && d > hasta) return false;
+      const ts = i._vencTs;
+      if (!ts) return false;
+      if (desde && ts < desde) return false;
+      if (hasta && ts > hasta) return false;
       return true;
     });
   }
@@ -2101,15 +2153,15 @@ function renderConsulta() {
 
   // Si filtro es "vence", ordenar siempre por vencimiento ascendente (más próximo primero)
   if (consultaFilter === 'vence' && col === 'fecha') {
-    items = [...items].sort((a,b) => (parseFecha(a.vencimiento) - parseFecha(b.vencimiento)));
+    items = [...items].sort((a,b) => (a._vencTs - b._vencTs));
   } else {
     items = [...items].sort((a,b) => {
       let va, vb;
-      if (col==='nombre')      { va=a.nombre;      vb=b.nombre; }
-      else if (col==='catalogo'){ va=a.catalogo;    vb=b.catalogo; }
-      else if (col==='anio')   { va=getAnio(a);    vb=getAnio(b); }
-      else if (col==='fecha')  { return mult*(parseFecha(a.fecha)-parseFecha(b.fecha)); }
-      else if (col==='vencimiento'){ return mult*(parseFecha(a.vencimiento)-parseFecha(b.vencimiento)); }
+      if (col==='nombre')      { va=a._nombre;    vb=b._nombre; }
+      else if (col==='catalogo'){ va=a._cat;       vb=b._cat; }
+      else if (col==='anio')   { va=getAnio(a);   vb=getAnio(b); }
+      else if (col==='fecha')  { return mult*(a._fechaTs - b._fechaTs); }
+      else if (col==='vencimiento'){ return mult*(a._vencTs - b._vencTs); }
       else if (col==='estado') { va=getEstado(a);  vb=getEstado(b); }
       else { return mult*(parseFecha(a.fecha)-parseFecha(b.fecha)); }
       const cmp = mult * va.localeCompare(vb);
@@ -2133,8 +2185,14 @@ function renderConsulta() {
     tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--dim);padding:32px">No se encontraron insumos</td></tr>';
     count.textContent=''; return;
   }
-  tbody.innerHTML=items.map(i=>{
-    const e=getEstado(i), rc=e==='baja'?'row-baja':'row-disponible';
+  // Pagination
+  consultaTotalItems = items.length;
+  const totalPages = Math.ceil(consultaTotalItems / CONSULTA_PAGE_SIZE);
+  if (consultaPage >= totalPages) consultaPage = Math.max(0, totalPages - 1);
+  const pageItems = items.slice(consultaPage * CONSULTA_PAGE_SIZE, (consultaPage + 1) * CONSULTA_PAGE_SIZE);
+
+  tbody.innerHTML=pageItems.map(i=>{
+    const e=i._estado||getEstado(i), rc=e==='baja'?'row-baja':'row-disponible';
     const uso=i.inicioConsumo?(i.finConsumo?`${i.inicioConsumo} → ${i.finConsumo}`:`Desde ${i.inicioConsumo}`):'—';
     return `<tr class="${rc}" data-id="${i.id}">
       <td>${htmlEsc(i.nombre)}</td><td><span class="mono">${htmlEsc(i.catalogo)}</span></td>
@@ -2144,7 +2202,37 @@ function renderConsulta() {
       <td style="font-size:12px;color:var(--mid)">${uso}</td>
     </tr>`;
   }).join('');
-  count.textContent=`Mostrando ${items.length} insumo${items.length!==1?'s':''} · ${consultaYear==='todos'?'Todos los años':'Hoja '+consultaYear}`;
+
+  const start = consultaPage * CONSULTA_PAGE_SIZE + 1;
+  const end   = Math.min((consultaPage + 1) * CONSULTA_PAGE_SIZE, consultaTotalItems);
+  count.textContent = totalPages > 1
+    ? `Mostrando ${start}–${end} de ${consultaTotalItems} insumos · ${consultaYear==='todos'?'Todos los años':'Hoja '+consultaYear}`
+    : `Mostrando ${consultaTotalItems} insumo${consultaTotalItems!==1?'s':''} · ${consultaYear==='todos'?'Todos los años':'Hoja '+consultaYear}`;
+
+  // Render pagination controls
+  let paginEl = document.getElementById('consulta-pagination');
+  if (!paginEl) {
+    paginEl = document.createElement('div');
+    paginEl.id = 'consulta-pagination';
+    paginEl.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 0 4px;';
+    count.parentNode.insertBefore(paginEl, count.nextSibling);
+  }
+  if (totalPages <= 1) { paginEl.innerHTML = ''; }
+  else {
+    const btnStyle = (active) => `style="padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:${active?'var(--accent)':'var(--surface)'};color:${active?'#fff':'var(--mid)'};cursor:pointer;font-size:13px;font-weight:500;transition:.15s"`;
+    let html = `<button ${btnStyle(false)} onclick="setConsultaPage(${consultaPage-1})" ${consultaPage===0?'disabled':''}">‹ Anterior</button>`;
+    // Show page buttons (max 7 visible)
+    const delta = 2;
+    for (let p = 0; p < totalPages; p++) {
+      if (p === 0 || p === totalPages-1 || (p >= consultaPage-delta && p <= consultaPage+delta)) {
+        html += `<button ${btnStyle(p===consultaPage)} onclick="setConsultaPage(${p})">${p+1}</button>`;
+      } else if (p === consultaPage-delta-1 || p === consultaPage+delta+1) {
+        html += `<span style="color:var(--dim);padding:0 4px">…</span>`;
+      }
+    }
+    html += `<button ${btnStyle(false)} onclick="setConsultaPage(${consultaPage+1})" ${consultaPage>=totalPages-1?'disabled':''}">Siguiente ›</button>`;
+    paginEl.innerHTML = html;
+  }
   updateConsultaActions();
 }
 
@@ -3020,6 +3108,7 @@ function aplicarFiltroPersonalizado() {
   fpFiltros.vencHasta  = document.getElementById('fd-venc-hasta')?.value  || '';
   fpUpdateBadge();
   fpRenderPills();
+  consultaPage = 0;
   renderConsulta();
 }
 

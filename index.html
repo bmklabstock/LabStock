@@ -766,12 +766,12 @@ mark{background:transparent;color:var(--accent);font-weight:700}
           <th onclick="sortConsulta('nombre')" style="cursor:pointer;user-select:none">Insumo <span id="sort-nombre"></span></th>
           <th onclick="sortConsulta('catalogo')" style="cursor:pointer;user-select:none">N° Catálogo <span id="sort-catalogo"></span></th>
           <th>N° Lote</th>
-          <th onclick="sortConsulta('anio')" style="cursor:pointer;user-select:none">Hoja <span id="sort-anio"></span></th>
           <th onclick="sortConsulta('fecha')" style="cursor:pointer;user-select:none">Llegada <span id="sort-fecha"></span></th>
           <th onclick="sortConsulta('vencimiento')" style="cursor:pointer;user-select:none">Vencimiento <span id="sort-vencimiento"></span></th>
           <th>Temp.</th>
           <th onclick="sortConsulta('estado')" style="cursor:pointer;user-select:none">Estado <span id="sort-estado"></span></th>
-          <th>Período de uso</th>
+          <th onclick="sortConsulta('inicio')" style="cursor:pointer;user-select:none">Inicio uso <span id="sort-inicio"></span></th>
+          <th onclick="sortConsulta('fin')" style="cursor:pointer;user-select:none">Fin uso <span id="sort-fin"></span></th>
         </tr></thead>
         <tbody id="consulta-tbody"></tbody>
       </table>
@@ -838,10 +838,6 @@ mark{background:transparent;color:var(--accent);font-weight:700}
       <div class="page-desc">Escaneá un código y completá los datos para que el programa lo reconozca automáticamente.</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn btn-ghost" onclick="prepoblarBD()" id="bd-prepoblar-btn" style="font-size:12px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Pre-poblar desde stock
-      </button>
       <button class="btn btn-ghost" onclick="syncBD()" id="bd-sync-btn" style="font-size:12px">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
         Recargar BD
@@ -1255,6 +1251,8 @@ async function syncFromSheets() {
         // Precalculate timestamps for fast sorting/filtering
         const _fechaTs = _parseFechaTs(_fecha);
         const _vencTs  = _parseFechaTs(_venc);
+        const _inicioTs = _parseFechaTs(row[COL.inicioConsumo] || '');
+        const _finTs    = _parseFechaTs(row[COL.finConsumo]    || '');
         // Precalculate estado for fast filtering
         let _estado;
         if (_finConsumo.trim()) {
@@ -1284,7 +1282,7 @@ async function syncFromSheets() {
           rendimiento:    row[COL.rendimiento]  || '',
           obs:            row[COL.obs]          || '',
           // Precalculated for performance
-          _fechaTs, _vencTs, _estado, _nombre, _cat, _lot,
+          _fechaTs, _vencTs, _inicioTs, _finTs, _estado, _nombre, _cat, _lot,
         });
       });
     });
@@ -2180,6 +2178,8 @@ function renderConsulta() {
       else if (col==='anio')   { va=getAnio(a);   vb=getAnio(b); }
       else if (col==='fecha')  { return mult*(a._fechaTs - b._fechaTs); }
       else if (col==='vencimiento'){ return mult*(a._vencTs - b._vencTs); }
+      else if (col==='inicio')     { return mult*(a._inicioTs - b._inicioTs); }
+      else if (col==='fin')        { return mult*(a._finTs    - b._finTs); }
       else if (col==='estado') { va=getEstado(a);  vb=getEstado(b); }
       else { return mult*(parseFecha(a.fecha)-parseFecha(b.fecha)); }
       const cmp = mult * va.localeCompare(vb);
@@ -2191,7 +2191,7 @@ function renderConsulta() {
   }
 
   // Actualizar indicadores visuales en headers
-  ['nombre','catalogo','anio','fecha','vencimiento','estado'].forEach(c => {
+  ['nombre','catalogo','fecha','vencimiento','estado','inicio','fin'].forEach(c => {
     const el = document.getElementById('sort-'+c);
     if (!el) return;
     el.textContent = consultaSort.col===c ? (consultaSort.dir==='asc' ? ' ↑' : ' ↓') : '';
@@ -2211,13 +2211,13 @@ function renderConsulta() {
 
   tbody.innerHTML=pageItems.map(i=>{
     const e=i._estado||getEstado(i), rc=e==='baja'?'row-baja':'row-disponible';
-    const uso=i.inicioConsumo?(i.finConsumo?`${i.inicioConsumo} → ${i.finConsumo}`:`Desde ${i.inicioConsumo}`):'—';
     return `<tr class="${rc}" data-id="${i.id}">
       <td>${htmlEsc(i.nombre)}</td><td><span class="mono">${htmlEsc(i.catalogo)}</span></td>
-      <td><span class="lote-badge">${htmlEsc(i.lote)}</span></td><td>${yearBadge(getAnio(i))}</td>
+      <td><span class="lote-badge">${htmlEsc(i.lote)}</span></td>
       <td>${fmtFecha(i.fecha)}</td><td>${fmtFecha(i.vencimiento)}</td>
       <td>${tempBadge(htmlEsc(i.tempAlmacen))}</td><td>${estadoBadge(i)}</td>
-      <td style="font-size:12px;color:var(--mid)">${uso}</td>
+      <td style="font-size:12px;color:var(--mid)">${i.inicioConsumo ? fmtFecha(i.inicioConsumo) : '—'}</td>
+      <td style="font-size:12px;color:var(--mid)">${i.finConsumo ? fmtFecha(i.finConsumo) : '—'}</td>
     </tr>`;
   }).join('');
 

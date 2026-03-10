@@ -1746,7 +1746,11 @@ function altaACSelect(field, idx) {
   inferAndSetTemp(item.catalogo, item.tempAlmacen);
   if (field === 'lote') {
     const v = document.getElementById('alta-vencimiento');
-    if (!v.value) { v.value = item.vencimiento; flashFill('alta-vencimiento'); }
+    const venc = item.vencimiento;
+    if (venc && venc.toUpperCase() !== 'NA') {
+      const iso = dmy2iso(venc);
+      if (iso) { v.value = iso; flashFill('alta-vencimiento'); }
+    }
   }
   updatePreview();
 }
@@ -2089,6 +2093,18 @@ function parseFecha(str) {
   if (!str) return new Date(0);
   if (str.includes('/')) { const [d,m,y]=str.split('/'); return new Date(y+'-'+m+'-'+d); }
   return new Date(str);
+}
+
+// Convert DD/MM/YYYY → YYYY-MM-DD for HTML date inputs. Returns '' if invalid.
+function dmy2iso(str) {
+  if (!str) return '';
+  if (str.includes('/')) {
+    const [d,m,y] = str.split('/');
+    if (y && y.length === 4) return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  // Already ISO or other format — return as-is if looks valid
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  return '';
 }
 
 function sortConsulta(col) {
@@ -3622,7 +3638,8 @@ function bdACSelect(field, idx) {
     const loteBase = stripAI(item.lote).replace(/\s+[A-ZÑ]{1,3}$/, '').trim();
     setVal('bd-lote', loteBase);
     if (item.vencimiento && item.vencimiento.toUpperCase() !== 'NA' && item.vencimiento !== 'No posee') {
-      setVal('bd-vencimiento', item.vencimiento);
+      const iso = dmy2iso(item.vencimiento);
+      if (iso) setVal('bd-vencimiento', iso);
     }
   } else if (field === 'catalogo') {
     // Catálogo → solo nombre (lote y vencimiento varían por unidad)

@@ -259,6 +259,74 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 .stat-card.amber .stat-value{color:var(--amber)}
 .stat-card.blue .stat-value{color:var(--blue)}
 
+/* DASHBOARD v2 */
+.dash-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.dash-kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow)}
+.dash-kpi.red{border-color:rgba(224,82,82,.25)}
+.dash-kpi.amber{border-color:rgba(230,168,23,.25)}
+.dash-kpi.purple{border-color:rgba(157,111,224,.25)}
+.dash-kpi-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px}
+.dash-kpi.red .dash-kpi-icon{background:var(--red-l)}
+.dash-kpi.amber .dash-kpi-icon{background:var(--amber-l)}
+.dash-kpi.purple .dash-kpi-icon{background:var(--accent-l)}
+.dash-kpi-val{font-size:34px;font-weight:600;font-family:'IBM Plex Mono',monospace;line-height:1}
+.dash-kpi.red .dash-kpi-val{color:var(--red)}
+.dash-kpi.amber .dash-kpi-val{color:var(--amber)}
+.dash-kpi.purple .dash-kpi-val{color:var(--accent-d)}
+.dash-kpi-label{font-size:12px;color:var(--mid);margin-top:4px;font-weight:500}
+.dash-kpi-sub{font-size:11px;color:var(--dim);margin-top:2px}
+.dash-panels-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.dash-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.dash-panel-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dash-panel-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--mid);display:flex;align-items:center;gap:8px}
+.dash-panel-title::before{content:'';width:3px;height:12px;border-radius:2px;flex-shrink:0}
+.dash-panel.red .dash-panel-title::before{background:var(--red)}
+.dash-panel.amber .dash-panel-title::before{background:var(--amber)}
+.dash-panel.blue .dash-panel-title::before{background:var(--blue)}
+.dash-panel.purple .dash-panel-title::before{background:var(--accent-d)}
+.dash-panel-count{font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px}
+.dash-panel.red .dash-panel-count{background:var(--red-l);color:var(--red)}
+.dash-panel.amber .dash-panel-count{background:var(--amber-l);color:var(--amber)}
+.dash-panel.blue .dash-panel-count{background:var(--blue-l);color:var(--blue)}
+.dash-panel.purple .dash-panel-count{background:var(--accent-l);color:var(--accent-d)}
+.dash-panel-list{max-height:310px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;flex:1}
+.dash-panel-list::-webkit-scrollbar{width:3px}
+.dash-panel-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.dash-row{display:flex;align-items:center;justify-content:space-between;padding:9px 18px;border-bottom:1px solid var(--border2);gap:10px;cursor:pointer;transition:background .12s;user-select:none}
+.dash-row:last-child{border-bottom:none}
+.dash-row:hover{background:rgba(157,111,224,.07)}
+.dash-row:hover .dash-row-arrow{opacity:1}
+.dash-row-arrow{opacity:0;color:var(--accent-d);font-size:11px;flex-shrink:0;transition:opacity .12s}
+.dash-row-left{min-width:0;flex:1}
+.dash-row-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-row-meta{font-size:11px;color:var(--dim);margin-top:2px;font-family:'IBM Plex Mono',monospace}
+.dash-badge-red{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;flex-shrink:0;background:var(--red-l);color:var(--red)}
+.dash-badge-amber{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;flex-shrink:0;background:var(--amber-l);color:var(--amber)}
+.dash-badge-blue{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;flex-shrink:0;background:var(--blue-l);color:var(--blue)}
+.dash-badge-zero{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;flex-shrink:0;background:var(--red-l);color:var(--red);border:1px solid rgba(224,82,82,.3)}
+.dash-badge-low{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;flex-shrink:0;background:var(--amber-l);color:var(--amber)}
+.dash-badge-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;letter-spacing:.5px}
+.dash-tag-fecha{background:var(--red-l);color:var(--red)}
+.dash-tag-logico{background:var(--amber-l);color:var(--amber)}
+.dash-tag-nombre{background:var(--accent-l);color:var(--accent-d)}
+.dash-tag-cat{background:var(--blue-l);color:var(--blue)}
+.dash-list-section{padding:6px 18px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);background:var(--surface2);border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between}
+.dash-list-section-count{font-size:10px;background:var(--border);color:var(--mid);padding:1px 7px;border-radius:8px;font-weight:600}
+.dash-mes-label{padding:7px 18px 5px;font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--dim);background:var(--surface2);border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between}
+.dash-mes-count{font-size:10px;background:var(--border);color:var(--mid);padding:1px 7px;border-radius:8px;font-weight:600}
+.dash-prox-day{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--mid);width:24px;text-align:right;flex-shrink:0}
+.dash-seg-tabs{display:flex;background:var(--surface2);border-radius:6px;padding:2px;gap:1px}
+.dash-seg-tab{padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--dim);transition:all .15s;font-family:'IBM Plex Sans',sans-serif}
+.dash-seg-tab.active{background:var(--blue);color:#fff}
+.dash-err-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.dash-err-icon.fecha{background:var(--red-l)}
+.dash-err-icon.logico{background:var(--amber-l)}
+.dash-err-icon.nombre{background:var(--accent-l)}
+.dash-err-icon.cat{background:var(--blue-l)}
+.dash-err-body{flex:1;min-width:0;margin-left:10px}
+.dash-err-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-err-desc{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.4}
+
 /* TOAST */
 .toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
 .toast{display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);animation:toastIn .3s ease;max-width:360px}
@@ -524,22 +592,71 @@ mark{background:transparent;color:var(--accent);font-weight:700}
       <span id="sync-label">Sincronizar</span>
     </button>
   </div>
-  <div id="alert-container"></div>
-  <div id="dash-year-tabs" class="year-tabs-bar"></div>
-  <div class="stats-row">
-    <div class="stat-card blue"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total insumos</div></div>
-    <div class="stat-card purple"><div class="stat-value" id="stat-disp">—</div><div class="stat-label">Disponibles</div></div>
-    <div class="stat-card red"><div class="stat-value" id="stat-baja">—</div><div class="stat-label">Dados de baja</div></div>
-    <div class="stat-card amber"><div class="stat-value" id="stat-vence">—</div><div class="stat-label">Por vencer</div></div>
-    <div class="stat-card red"><div class="stat-value" id="stat-vencido">—</div><div class="stat-label">Vencidos</div></div>
+
+  <!-- KPIs -->
+  <div class="dash-kpi-row">
+    <div class="dash-kpi red">
+      <div class="dash-kpi-icon">⚠️</div>
+      <div>
+        <div class="dash-kpi-val" id="kpi-vencidos">—</div>
+        <div class="dash-kpi-label">Vencidos sin dar de baja</div>
+      </div>
+    </div>
+    <div class="dash-kpi amber">
+      <div class="dash-kpi-icon">📦</div>
+      <div>
+        <div class="dash-kpi-val" id="kpi-stock-bajo">—</div>
+        <div class="dash-kpi-label">Alertas de stock bajo</div>
+        <div class="dash-kpi-sub">Última baja &lt;60d · ≤2 unidades</div>
+      </div>
+    </div>
+    <div class="dash-kpi purple">
+      <div class="dash-kpi-icon">🔍</div>
+      <div>
+        <div class="dash-kpi-val" id="kpi-errores">—</div>
+        <div class="dash-kpi-label">Posibles errores de carga</div>
+        <div class="dash-kpi-sub">Fechas, nombres, catálogos</div>
+      </div>
+    </div>
   </div>
-  <div class="card">
-    <div class="card-title">Últimos movimientos</div>
-    <div class="table-wrap">
-      <table class="results-table">
-        <thead><tr><th>Fecha</th><th>Hoja</th><th>Insumo</th><th>N° Catálogo</th><th>N° Lote</th><th>Estado</th></tr></thead>
-        <tbody id="dash-tbody"><tr class="loading-row"><td colspan="6"><span class="spinner"></span>Cargando desde Google Sheets…</td></tr></tbody>
-      </table>
+
+  <!-- Paneles fila 1: vencidos + próximos -->
+  <div class="dash-panels-grid">
+    <div class="dash-panel red">
+      <div class="dash-panel-header">
+        <div class="dash-panel-title">Vencidos y por vencer</div>
+        <span class="dash-panel-count" id="panel-count-venc">—</span>
+      </div>
+      <div class="dash-panel-list" id="panel-vencidos"></div>
+    </div>
+    <div class="dash-panel blue">
+      <div class="dash-panel-header">
+        <div class="dash-panel-title">Próximos vencimientos</div>
+        <div class="dash-seg-tabs" id="prox-tabs">
+          <button class="dash-seg-tab" data-d="30" onclick="setProxDays(30)">30d</button>
+          <button class="dash-seg-tab active" data-d="60" onclick="setProxDays(60)">60d</button>
+          <button class="dash-seg-tab" data-d="90" onclick="setProxDays(90)">90d</button>
+        </div>
+      </div>
+      <div class="dash-panel-list" id="panel-proximos"></div>
+    </div>
+  </div>
+
+  <!-- Paneles fila 2: stock bajo + errores -->
+  <div class="dash-panels-grid">
+    <div class="dash-panel amber">
+      <div class="dash-panel-header">
+        <div class="dash-panel-title">Alertas de bajo stock</div>
+        <span class="dash-panel-count" id="panel-count-stock">—</span>
+      </div>
+      <div class="dash-panel-list" id="panel-stock"></div>
+    </div>
+    <div class="dash-panel purple">
+      <div class="dash-panel-header">
+        <div class="dash-panel-title">Posibles errores de carga</div>
+        <span class="dash-panel-count" id="panel-count-errores">—</span>
+      </div>
+      <div class="dash-panel-list" id="panel-errores"></div>
     </div>
   </div>
 </div>
@@ -1573,7 +1690,6 @@ function setAltaFechaHoy() {
 }
 
 function renderAll() {
-  renderAlertasVencimiento();
   renderDashboard();
   renderConsulta();
 }
@@ -1670,34 +1786,300 @@ function renderYearTabs(containerId, currentYear, onSelectFn) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// DASHBOARD
+// DASHBOARD v2
 // ═══════════════════════════════════════════════════════════════
-function setDashYear(año) { dashYear = año; renderDashboard(); }
+let dashProxDays = 60;
+function setProxDays(d) {
+  dashProxDays = d;
+  document.querySelectorAll('.dash-seg-tab').forEach(t => t.classList.toggle('active', +t.dataset.d === d));
+  renderDashPanelProximos();
+}
 
 function renderDashboard() {
-  renderYearTabs('dash-year-tabs', dashYear, 'setDashYear');
-  const filtered = dashYear==='todos' ? stock : stock.filter(i=>getAnio(i)===dashYear);
-  document.getElementById('stat-total').textContent = filtered.length;
-  document.getElementById('stat-disp').textContent  = filtered.filter(i=>getEstado(i)==='disponible').length;
-  document.getElementById('stat-baja').textContent  = filtered.filter(i=>getEstado(i)==='baja').length;
-  document.getElementById('stat-vence').textContent = filtered.filter(i=>getEstado(i)==='vence').length;
-  document.getElementById('stat-vencido').textContent = filtered.filter(i=>getEstado(i)==='vencido').length;
-  const sorted = [...filtered]
+  renderDashKPIs();
+  renderDashPanelVencidos();
+  renderDashPanelProximos();
+  renderDashPanelStock();
+  renderDashPanelErrores();
+}
+
+// ── Navegar a un ítem específico en Consultas ─────────────────
+function goToItemInConsultas(itemId) {
+  // Limpiar filtros actuales
+  consultaQuery = '';
+  consultaFilter = 'todos';
+  consultaYear = 'todos';
+  fpFiltros.estados.clear(); fpFiltros.catalogos.clear();
+  fpFiltros.nombres.clear(); fpFiltros.lotes.clear();
+  fpFiltros.temps.clear();
+  fpFiltros.fechaDesde = ''; fpFiltros.fechaHasta = '';
+  fpFiltros.vencDesde  = ''; fpFiltros.vencHasta  = '';
+  const inp = document.getElementById('consulta-input');
+  if (inp) inp.value = '';
+  // Activar filtro por id único
+  dashFocusItemId = itemId;
+  showPage('consultas');
+}
+
+let dashFocusItemId = null;
+
+// ── KPIs ──────────────────────────────────────────────────────
+function renderDashKPIs() {
+  const vencidos = stock.filter(i => i._estado === 'vencido');
+  document.getElementById('kpi-vencidos').textContent = vencidos.length;
+
+  const stockBajo = calcDashStockBajo();
+  const totalStockBajo = stockBajo.sinStock.length + stockBajo.stockBajo.length;
+  document.getElementById('kpi-stock-bajo').textContent = totalStockBajo;
+
+  const errores = calcDashErrores();
+  const totalErr = errores.fecha.length + errores.logico.length + errores.catalogo.length + errores.nombre.length;
+  document.getElementById('kpi-errores').textContent = totalErr;
+}
+
+// ── Panel 1: Vencidos y por vencer ────────────────────────────
+function renderDashPanelVencidos() {
+  const items = stock
+    .filter(i => i._estado === 'vencido' || i._estado === 'vence')
     .sort((a,b) => {
-      // Primero por año de hoja descendente (2026 > 2025 > ... > 2022)
-      const yearDiff = (b.sheetName || '').localeCompare(a.sheetName || '');
-      if (yearDiff !== 0) return yearDiff;
-      // Después por fecha dentro del mismo año
-      return parseFecha(b.fecha) - parseFecha(a.fecha);
-    })
-    .slice(0, 10);
-  document.getElementById('dash-tbody').innerHTML = sorted.length
-    ? sorted.map(i=>`<tr>
-        <td>${fmtFecha(i.fecha)}</td><td>${yearBadge(getAnio(i))}</td>
-        <td>${htmlEsc(i.nombre)}</td><td><span class="mono">${htmlEsc(i.catalogo)}</span></td>
-        <td><span class="lote-badge">${htmlEsc(i.lote)}</span></td><td>${estadoBadge(i)}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="6" style="text-align:center;color:var(--dim);padding:32px">Sin datos</td></tr>';
+      // vencidos primero (ordenados por cuánto tiempo llevan vencidos, más antiguo primero)
+      // luego por vencer (más próximo primero)
+      if (a._estado === 'vencido' && b._estado !== 'vencido') return -1;
+      if (b._estado === 'vencido' && a._estado !== 'vencido') return 1;
+      return (a._vencTs||0) - (b._vencTs||0);
+    });
+
+  document.getElementById('panel-count-venc').textContent = items.length + ' insumos';
+  const hoy = Date.now();
+
+  document.getElementById('panel-vencidos').innerHTML = items.length
+    ? items.map(i => {
+        const diffDays = Math.round((hoy - (i._vencTs||hoy)) / 86400000);
+        const daysToVenc = Math.round(((i._vencTs||hoy) - hoy) / 86400000);
+        const badge = i._estado === 'vencido'
+          ? `<span class="dash-badge-red">Venció hace ${diffDays}d</span>`
+          : daysToVenc <= 14
+            ? `<span class="dash-badge-red">Vence en ${daysToVenc}d</span>`
+            : `<span class="dash-badge-amber">Vence en ${daysToVenc}d</span>`;
+        return `<div class="dash-row" onclick="goToItemInConsultas(${i.id})">
+          <div class="dash-row-left">
+            <div class="dash-row-name">${htmlEsc(i.nombre)}</div>
+            <div class="dash-row-meta">${fmtFecha(i.fecha)} · ${htmlEsc(i.lote)}</div>
+          </div>
+          ${badge}
+          <span class="dash-row-arrow">→</span>
+        </div>`;
+      }).join('')
+    : '<div style="padding:28px;text-align:center;color:var(--dim);font-size:13px">Sin vencimientos</div>';
+}
+
+// ── Panel 2: Próximos vencimientos ────────────────────────────
+function renderDashPanelProximos() {
+  const hoy = Date.now();
+  const limit = hoy + dashProxDays * 86400000;
+  const items = stock
+    .filter(i => i._estado === 'vence' || (i._estado === 'disponible' && i._vencTs && i._vencTs > hoy && i._vencTs <= limit))
+    .sort((a,b) => (a._vencTs||0) - (b._vencTs||0));
+
+  if (!items.length) {
+    document.getElementById('panel-proximos').innerHTML =
+      `<div style="padding:28px;text-align:center;color:var(--dim);font-size:13px">Sin vencimientos en ${dashProxDays} días</div>`;
+    return;
+  }
+
+  // Agrupar por mes
+  const byMes = {};
+  for (const i of items) {
+    const d = new Date(i._vencTs);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = d.toLocaleDateString('es-AR', {month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
+    if (!byMes[key]) byMes[key] = { label, items:[] };
+    byMes[key].items.push(i);
+  }
+
+  let html = '';
+  for (const key of Object.keys(byMes).sort()) {
+    const mes = byMes[key];
+    html += `<div class="dash-mes-label">${mes.label} <span class="dash-mes-count">${mes.items.length}</span></div>`;
+    for (const i of mes.items) {
+      const d   = new Date(i._vencTs);
+      const day = d.getDate();
+      const daysLeft = Math.round((i._vencTs - hoy) / 86400000);
+      const bc  = daysLeft <= 14 ? 'dash-badge-red' : daysLeft <= 30 ? 'dash-badge-amber' : 'dash-badge-blue';
+      html += `<div class="dash-row" onclick="goToItemInConsultas(${i.id})">
+        <div class="dash-prox-day">${day}</div>
+        <div class="dash-row-left" style="margin-left:10px">
+          <div class="dash-row-name">${htmlEsc(i.nombre)}</div>
+          <div class="dash-row-meta">${htmlEsc(i.lote)}</div>
+        </div>
+        <span class="${bc}">${daysLeft}d</span>
+        <span class="dash-row-arrow">→</span>
+      </div>`;
+    }
+  }
+  document.getElementById('panel-proximos').innerHTML = html;
+}
+
+// ── Panel 3: Bajo stock ───────────────────────────────────────
+// Lógica: agrupa por catálogo normalizado.
+// Incluye grupo si: su última baja fue hace < 60 días Y quedan 0 o 1-2 unidades disponibles.
+function calcDashStockBajo() {
+  const hoy = Date.now();
+  const VENTANA = 60 * 86400000;
+
+  // Agrupar todos los items por catalogo normalizado
+  const grupos = {};
+  for (const i of stock) {
+    const key = stripAI(i.catalogo).toLowerCase().trim() || i.nombre.toLowerCase().trim();
+    if (!grupos[key]) grupos[key] = { catalogo: i.catalogo, nombre: i.nombre, items: [] };
+    grupos[key].items.push(i);
+  }
+
+  const sinStock = [], stockBajo = [];
+
+  for (const key of Object.keys(grupos)) {
+    const g = grupos[key];
+    const bajas = g.items.filter(i => i._estado === 'baja' && i._finTs > 0);
+    if (!bajas.length) continue;
+    const ultimaBaja = Math.max(...bajas.map(i => i._finTs));
+    if (hoy - ultimaBaja > VENTANA) continue; // última baja hace más de 60 días → ignorar
+
+    const disponibles = g.items.filter(i => i._estado !== 'baja');
+    const count = disponibles.length;
+    const diasUltimaBaja = Math.round((hoy - ultimaBaja) / 86400000);
+    const metaStr = diasUltimaBaja === 0 ? 'última baja hoy' : `última baja hace ${diasUltimaBaja}d`;
+    // Tomar un ítem representante del grupo (primero disponible o primero de la lista)
+    const rep = disponibles[0] || g.items[0];
+
+    const entry = { id: rep.id, nombre: g.nombre, catalogo: g.catalogo, count, metaStr };
+    if (count === 0) sinStock.push(entry);
+    else if (count <= 2) stockBajo.push(entry);
+  }
+
+  sinStock.sort((a,b) => a.nombre.localeCompare(b.nombre));
+  stockBajo.sort((a,b) => a.count - b.count || a.nombre.localeCompare(b.nombre));
+  return { sinStock, stockBajo };
+}
+
+function renderDashPanelStock() {
+  const { sinStock, stockBajo } = calcDashStockBajo();
+  const total = sinStock.length + stockBajo.length;
+  document.getElementById('panel-count-stock').textContent = total + ' insumos';
+
+  let html = '';
+  if (sinStock.length) {
+    html += `<div class="dash-list-section">Sin stock <span class="dash-list-section-count">${sinStock.length}</span></div>`;
+    html += sinStock.map(e => `
+      <div class="dash-row" onclick="goToItemInConsultas(${e.id})">
+        <div class="dash-row-left">
+          <div class="dash-row-name">${htmlEsc(e.nombre)}</div>
+          <div class="dash-row-meta">${htmlEsc(e.catalogo)} · ${e.metaStr}</div>
+        </div>
+        <span class="dash-badge-zero">0 unidades</span>
+        <span class="dash-row-arrow">→</span>
+      </div>`).join('');
+  }
+  if (stockBajo.length) {
+    html += `<div class="dash-list-section">Stock bajo · ≤2 unidades <span class="dash-list-section-count">${stockBajo.length}</span></div>`;
+    html += stockBajo.map(e => `
+      <div class="dash-row" onclick="goToItemInConsultas(${e.id})">
+        <div class="dash-row-left">
+          <div class="dash-row-name">${htmlEsc(e.nombre)}</div>
+          <div class="dash-row-meta">${htmlEsc(e.catalogo)} · ${e.metaStr}</div>
+        </div>
+        <span class="dash-badge-low">${e.count} unidad${e.count===1?'':'es'}</span>
+        <span class="dash-row-arrow">→</span>
+      </div>`).join('');
+  }
+  if (!html) html = '<div style="padding:28px;text-align:center;color:var(--dim);font-size:13px">Sin alertas de stock</div>';
+  document.getElementById('panel-stock').innerHTML = html;
+}
+
+// ── Panel 4: Errores de carga ─────────────────────────────────
+function calcDashErrores() {
+  const errFecha = [], errLogico = [], errCatalogo = [], errNombre = [];
+  const hoy = new Date();
+  const MIN_YEAR = 2000, MAX_YEAR = hoy.getFullYear() + 10;
+
+  // Frecuencias: por nombre → catálogo más común; por catálogo → nombre más común
+  const freqCatPorNombre = {}, freqNombrePorCat = {};
+  for (const i of stock) {
+    const nom = i.nombre.trim(), cat = stripAI(i.catalogo).trim().toLowerCase();
+    if (nom && cat) {
+      if (!freqCatPorNombre[nom]) freqCatPorNombre[nom] = {};
+      freqCatPorNombre[nom][cat] = (freqCatPorNombre[nom][cat]||0) + 1;
+      if (!freqNombrePorCat[cat]) freqNombrePorCat[cat] = {};
+      freqNombrePorCat[cat][nom] = (freqNombrePorCat[cat][nom]||0) + 1;
+    }
+  }
+  // Obtener el valor mayoritario
+  const majority = obj => Object.entries(obj).sort((a,b)=>b[1]-a[1])[0];
+
+  for (const i of stock) {
+    // FECHA: vencimiento con año imposible
+    if (i._vencTs > 0) {
+      const yr = new Date(i._vencTs).getFullYear();
+      if (yr < MIN_YEAR || yr > MAX_YEAR) {
+        errFecha.push({ i, desc: `Vencimiento ${fmtFecha(i.vencimiento)} — año ${yr < MIN_YEAR ? 'imposible' : 'muy lejano'}` });
+        continue;
+      }
+    }
+    // LÓGICO: fin anterior a inicio
+    if (i._inicioTs > 0 && i._finTs > 0 && i._finTs < i._inicioTs) {
+      errLogico.push({ i, desc: `Fin ${fmtFecha(i.finConsumo)} anterior al inicio ${fmtFecha(i.inicioConsumo)}` });
+      continue;
+    }
+    // CATÁLOGO: distinto al más frecuente para este nombre
+    const nom = i.nombre.trim();
+    const myCat = stripAI(i.catalogo).trim().toLowerCase();
+    if (nom && myCat && freqCatPorNombre[nom]) {
+      const [majCat, majCount] = majority(freqCatPorNombre[nom]);
+      const total = Object.values(freqCatPorNombre[nom]).reduce((a,b)=>a+b,0);
+      if (majCat !== myCat && majCount / total >= 0.7 && total >= 3) {
+        errCatalogo.push({ i, desc: `Cat. <strong>${htmlEsc(stripAI(i.catalogo))}</strong> — mayoría usa <strong>${htmlEsc(majCat)}</strong> (${majCount}/${total})` });
+        continue;
+      }
+    }
+    // NOMBRE: distinto al más frecuente para este catálogo
+    const cat = stripAI(i.catalogo).trim().toLowerCase();
+    if (cat && nom && freqNombrePorCat[cat]) {
+      const [majNom, majCount] = majority(freqNombrePorCat[cat]);
+      const total = Object.values(freqNombrePorCat[cat]).reduce((a,b)=>a+b,0);
+      if (majNom !== nom && majCount / total >= 0.7 && total >= 3) {
+        errNombre.push({ i, desc: `Nombre diverge — mayoría cargada como <strong>${htmlEsc(majNom)}</strong>` });
+      }
+    }
+  }
+  return { fecha: errFecha, logico: errLogico, catalogo: errCatalogo, nombre: errNombre };
+}
+
+function renderDashPanelErrores() {
+  const err = calcDashErrores();
+  const total = err.fecha.length + err.logico.length + err.catalogo.length + err.nombre.length;
+  document.getElementById('panel-count-errores').textContent = total + ' detectados';
+
+  const seccion = (label, items, tipo, icon) => {
+    if (!items.length) return '';
+    const rows = items.map(({i, desc}) => `
+      <div class="dash-row" onclick="goToItemInConsultas(${i.id})">
+        <div class="dash-err-icon ${tipo}">${icon}</div>
+        <div class="dash-err-body">
+          <div class="dash-err-name">${htmlEsc(i.nombre)}</div>
+          <div class="dash-err-desc">${desc}</div>
+        </div>
+        <span class="dash-badge-tag dash-tag-${tipo}">${tipo.toUpperCase()}</span>
+        <span class="dash-row-arrow">→</span>
+      </div>`).join('');
+    return `<div class="dash-list-section">${label} <span class="dash-list-section-count">${items.length}</span></div>${rows}`;
+  };
+
+  let html = seccion('Fechas imposibles', err.fecha, 'fecha', '📅')
+           + seccion('Fin anterior al inicio', err.logico, 'logico', '⚠️')
+           + seccion('Catálogo inusual vs grupo', err.catalogo, 'cat', '🗂️')
+           + seccion('Nombre inusual vs grupo', err.nombre, 'nombre', '✏️');
+
+  if (!html) html = '<div style="padding:28px;text-align:center;color:var(--dim);font-size:13px">Sin errores detectados</div>';
+  document.getElementById('panel-errores').innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2146,6 +2528,19 @@ function sortConsulta(col) {
 }
 
 function renderConsulta() {
+  // ── Si venimos del dashboard con un ítem específico ───────────
+  if (dashFocusItemId !== null) {
+    const focusId = dashFocusItemId;
+    dashFocusItemId = null;
+    const item = stock.find(i => i.id === focusId);
+    if (item) {
+      // Mostrar solo ese ítem: pre-fill búsqueda con lote (único por ítem)
+      consultaQuery = item._lot || item._cat || item._nombre;
+      const inp = document.getElementById('consulta-input');
+      if (inp) inp.value = item.lote || item.catalogo || item.nombre;
+      consultaYear = item.sheetName || 'todos';
+    }
+  }
   renderYearTabs('consulta-year-tabs', consultaYear, 'setConsultaYear');
   let items = consultaYear==='todos' ? stock : stock.filter(i=>getAnio(i)===consultaYear);
   if (consultaQuery) items=items.filter(i=>

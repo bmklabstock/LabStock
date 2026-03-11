@@ -116,6 +116,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 /* CARDS */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;box-shadow:var(--shadow)}
 .card+.card{margin-top:16px}
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
 .card-title{font-size:13px;font-weight:600;color:var(--mid);text-transform:uppercase;letter-spacing:.8px;margin-bottom:18px;display:flex;align-items:center;gap:8px}
 .card-title::before{content:'';width:3px;height:14px;border-radius:2px;background:var(--accent);flex-shrink:0}
 
@@ -606,14 +607,14 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 
   <!-- FILA 1 -->
   <div class="dash-grid-2">
-    <div class="card">
+    <div class="dash-card">
       <div class="dash-card-head">
         <div class="dash-card-title">Vencidos y por vencer</div>
         <div class="dash-card-count" id="dash-venc-count">—</div>
       </div>
       <div id="dash-venc-list"></div>
     </div>
-    <div class="card">
+    <div class="dash-card">
       <div class="dash-card-head">
         <div class="dash-card-title">Alertas de bajo stock</div>
         <div class="dash-card-count" id="dash-ss-count">—</div>
@@ -624,7 +625,7 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 
   <!-- FILA 2 -->
   <div class="dash-grid-2">
-    <div class="card">
+    <div class="dash-card">
       <div class="dash-card-head">
         <div class="dash-card-title">Próximos vencimientos</div>
         <div class="dash-range-pills">
@@ -635,7 +636,7 @@ mark{background:transparent;color:var(--accent);font-weight:700}
       </div>
       <div class="dash-cal-wrap" id="dash-cal-wrap"></div>
     </div>
-    <div class="card">
+    <div class="dash-card">
       <div class="dash-card-head">
         <div class="dash-card-title">Posibles errores de carga</div>
         <div class="dash-card-count" id="dash-err-count">—</div>
@@ -1834,8 +1835,14 @@ function renderDashboard() {
   document.getElementById('dash-venc-count').textContent = vencItems.length + ' insumo' + (vencItems.length !== 1 ? 's' : '');
 
   const LIMIT = 10;
-  const _verRestanteBtn = (cats, label, n) =>
-    `<div class="dash-ver-mas" onclick="irAConsultasConSet(${JSON.stringify(cats)},'${label}')">Ver los ${n} restantes →</div>`;
+  // Mapa global para evitar problemas con JSON inline en HTML
+  window._dashVerMasMap = {};
+  let _vmIdx = 0;
+  const _verRestanteBtn = (cats, label, n) => {
+    const key = 'vm_' + (_vmIdx++);
+    window._dashVerMasMap[key] = {cats, label};
+    return `<div class="dash-ver-mas" onclick="irAConsultasConSet(window._dashVerMasMap['${key}'].cats, window._dashVerMasMap['${key}'].label)">Ver los ${n} restantes →</div>`;
+  };
 
   const vencVisible = vencItems.slice(0, LIMIT);
   const vencRest = vencItems.slice(LIMIT);

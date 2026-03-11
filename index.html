@@ -3723,15 +3723,53 @@ async function guardarEnBD() {
 
   try {
     await ensureBDSheet();
-    // First try exact match by raw code
+
+    // 1. Exact raw match → update that row
     let existing = bdRecords.find(r => r.codigoRaw === raw);
-    // If not found, look for a pre-populated row (no raw code) with same catalogo
+
+    // 2. No raw match but same catalogue without a raw yet → update (pre-populated row)
     if (!existing && catalogo) {
       existing = bdRecords.find(r => !r.codigoRaw && stripAI(r.catalogo).toLowerCase() === stripAI(catalogo).toLowerCase());
     }
 
+    // 3. Different raw but same catalogue already registered → BLOCK duplicate
+    if (!existing && catalogo) {
+      const dupCat = bdRecords.find(r => r.codigoRaw && r.codigoRaw !== raw &&
+        stripAI(r.catalogo).toLowerCase() === stripAI(catalogo).toLowerCase());
+      if (dupCat) {
+        const replace = confirm(
+          `⚠️ "${dupCat.nombre}" (Cat: ${dupCat.catalogo}) ya tiene un código RAW registrado.
+
+` +
+          `¿Querés reemplazar el código RAW guardado por este nuevo?
+
+` +
+          `OK = Reemplazar   |   Cancelar = No guardar`
+        );
+        if (!replace) {
+          toast('Guardado cancelado — el catálogo ya existe en la BD', 'error');
+          return;
+        }
+        existing = dupCat; // update that row instead of appending
+      }
+    }
+
+    // 4. No catalogue but same nombre already registered → warn but allow
+    if (!existing && !catalogo && nombre) {
+      const dupNom = bdRecords.find(r => r.codigoRaw && r.codigoRaw !== raw &&
+        r.nombre.toLowerCase() === nombre.toLowerCase());
+      if (dupNom) {
+        const proceed = confirm(
+          `⚠️ Ya existe un registro con el mismo nombre: "${dupNom.nombre}".
+
+` +
+          `¿Querés guardarlo de todas formas?`
+        );
+        if (!proceed) { toast('Guardado cancelado', 'error'); return; }
+      }
+    }
+
     if (existing) {
-      // Update existing row
       await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
         range: `${BD_SHEET}!A${existing.rowIndex}:E${existing.rowIndex}`,
@@ -3740,7 +3778,6 @@ async function guardarEnBD() {
       });
       toast('✓ Registro actualizado en BD', 'success');
     } else {
-      // Append new row
       await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
         range: `${BD_SHEET}!A:E`,

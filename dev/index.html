@@ -4121,6 +4121,7 @@ let metricaAcIndex = -1;
 let metricaAcItems = [];
 let _mRendChart = null;
 let _mDurChart = null;
+let _metricaCache = []; // lista pre-cacheada de insumos únicos (sin 2022/2023)
 // Filtros de métricas
 let metricaFiltroYear = 'todos';
 let metricaFiltroDesde = '';
@@ -4131,7 +4132,7 @@ let _metricaBDCache = null; // cache de datos construidos
 function _buildMetricaData(catalogo) {
   const cat = catalogo.toUpperCase();
   const unidades = stock
-    .filter(s => stripAI(s.catalogo||'').toUpperCase() === cat)
+    .filter(s => !METRICAS_HOJAS_EXCLUIDAS.has(s.sheetName) && stripAI(s.catalogo||'').toUpperCase() === cat)
     .map(s => {
       const estado = s._estado || getEstado(s);
       return {
@@ -4160,20 +4161,28 @@ function _buildMetricaData(catalogo) {
 }
 
 // ── Autocomplete ──────────────────────────────────
+const METRICAS_HOJAS_EXCLUIDAS = new Set(['2022', '2023']);
+
 function _metricaAcItems(q) {
   const ql = q.toLowerCase();
-  // Deduplica por nombre+catalogo del stock
+  return _metricaCache.filter(item =>
+    item.nombre.toLowerCase().includes(ql) ||
+    item.catalogo.toLowerCase().includes(ql)
+  ).slice(0, 10);
+}
+
+function _buildMetricaCache() {
   const seen = new Set();
-  const items = [];
+  _metricaCache = [];
   for (const s of stock) {
-    const key = (s.nombre||'')+'|'+(s.catalogo||'');
-    if (seen.has(key)) continue;
+    if (METRICAS_HOJAS_EXCLUIDAS.has(s.sheetName)) continue;
+    const cat = stripAI(s.catalogo || '');
+    const key = (s.nombre || '') + '|' + cat;
+    if (seen.has(key) || !s.nombre || !cat) continue;
     seen.add(key);
-    const cat = stripAI(s.catalogo||'');
-    if ((s.nombre||'').toLowerCase().includes(ql) || cat.toLowerCase().includes(ql) || (s.lote||'').toLowerCase().includes(ql))
-      items.push({nombre: s.nombre||'', catalogo: cat});
+    _metricaCache.push({ nombre: s.nombre, catalogo: cat });
   }
-  return items.slice(0, 10);
+  _metricaCache.sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 function _metricaHighlight(text, q) {
   if(!q) return text;
@@ -4531,6 +4540,7 @@ function metricaExpandHistorial() {
 // Inicializar cuando se abre la página
 function initMetricas() {
   if(!stock||!stock.length) { document.getElementById('metricaMain').innerHTML='<div class="m-empty"><p>Sincronizá el stock primero para ver las métricas.</p></div>'; return; }
+  _buildMetricaCache();
   metricaRenderMain();
 }
 

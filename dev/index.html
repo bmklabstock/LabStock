@@ -259,7 +259,7 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 .dash-stat-num{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;line-height:1}
 .dash-stat-lbl{font-size:11px;color:var(--mid);margin-top:2px}
 .dash-stat-num.red{color:#f08080}.dash-stat-num.amber{color:#f5b93a}.dash-stat-num.orange{color:#f5943a}
-.dash-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.dash-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start}
 .dash-card-head{padding:16px 20px 14px;display:flex;align-items:center;justify-content:space-between}
 .dash-card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.9px;color:var(--mid)}
 .dash-card-count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);background:var(--surface2);padding:2px 8px;border-radius:4px}
@@ -321,6 +321,8 @@ mark{background:transparent;color:var(--accent);font-weight:700}
 .dash-range-pills{display:flex;gap:4px}
 .dash-rpill{padding:2px 9px;border-radius:4px;font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--dim);background:none;font-family:'IBM Plex Sans',sans-serif;transition:.15s}
 .dash-rpill.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent-d)}
+.dash-ver-mas{padding:11px 20px;text-align:center;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;border-top:1px solid var(--border2);transition:.15s}
+.dash-ver-mas:hover{background:var(--accent-l)}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow)}
 .stat-value{font-size:28px;font-weight:600;letter-spacing:-1px;line-height:1}
 .stat-label{font-size:11px;color:var(--dim);margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
@@ -1773,7 +1775,12 @@ function renderYearTabs(containerId, currentYear, onSelectFn) {
 function setDashYear(año) { dashYear = año; renderDashboard(); }
 
 // Navega a Consultas filtrando por query (nombre o catálogo)
+// Filtro temporal del dashboard → Consultas (se limpia al navegar)
+let _dashFiltroSet = null; // Set de catálogos, o null
+let _dashFiltroLabel = '';
+
 function irAConsultasConFiltro(q) {
+  _dashFiltroSet = null;
   consultaQuery = q.toLowerCase();
   consultaYear  = 'todos';
   consultaFilter = 'todos';
@@ -1782,7 +1789,24 @@ function irAConsultasConFiltro(q) {
   showPage('consultas');
 }
 
+// Navega a Consultas mostrando solo los catálogos del Set, con banner informativo
+function irAConsultasConSet(cats, label) {
+  _dashFiltroSet = new Set(cats.map(c => c.toUpperCase()));
+  _dashFiltroLabel = label;
+  consultaQuery = '';
+  consultaYear  = 'todos';
+  consultaFilter = 'todos';
+  const input = document.getElementById('consulta-input');
+  if (input) input.value = '';
+  showPage('consultas');
+}
+
 let _dashRange = 60;
+function _limpiarDashFiltro() {
+  _dashFiltroSet = null;
+  _dashFiltroLabel = '';
+  renderConsulta();
+}
 function dashSetRange(n, btn) {
   _dashRange = n;
   document.querySelectorAll('.dash-rpill').forEach(p => p.classList.remove('active'));
@@ -1809,8 +1833,15 @@ function renderDashboard() {
   document.getElementById('stat-vence').textContent   = filtered.filter(i => getEstado(i) === 'vence').length;
   document.getElementById('dash-venc-count').textContent = vencItems.length + ' insumo' + (vencItems.length !== 1 ? 's' : '');
 
+  const LIMIT = 10;
+  const _verRestanteBtn = (cats, label, n) =>
+    `<div class="dash-ver-mas" onclick="irAConsultasConSet(${JSON.stringify(cats)},'${label}')">Ver los ${n} restantes →</div>`;
+
+  const vencVisible = vencItems.slice(0, LIMIT);
+  const vencRest = vencItems.slice(LIMIT);
+  const vencCatsRest = [...new Set(vencRest.map(i => stripAI(i.catalogo||'')))];
   document.getElementById('dash-venc-list').innerHTML = vencItems.length
-    ? vencItems.map(i => {
+    ? vencVisible.map(i => {
         const d = parseFecha(i.vencimiento);
         const n = diff(d);
         const cls = n < 0 ? 'vencido' : n <= 14 ? 'critico' : 'proximo';
@@ -1824,7 +1855,7 @@ function renderDashboard() {
           <div class="dash-venc-badge ${cls}">${label}</div>
           ${ARR}
         </div>`;
-      }).join('')
+      }).join('') + (vencRest.length ? _verRestanteBtn(vencCatsRest, `Vencidos y por vencer (${vencRest.length} más)`, vencRest.length) : '')
     : '<div class="dash-empty">Sin vencidos ni por vencer ✓</div>';
 
   // ── BAJO STOCK / SIN STOCK ──────────────────────
@@ -1870,10 +1901,17 @@ function renderDashboard() {
   const bajo     = ssItems.filter(s => s.tipo === 'bajo');
   const ubLabel  = n => n === 0 ? 'hoy' : `hace ${n}d`;
 
+  // Límite de 10 entre las dos secciones
+  const ssVisible = ssItems.slice(0, LIMIT);
+  const ssRest    = ssItems.slice(LIMIT);
+  const sinstockV = ssVisible.filter(s => s.tipo === 'sinstock');
+  const bajoV     = ssVisible.filter(s => s.tipo === 'bajo');
+  const ssCatsRest = [...new Set(ssRest.map(s => s.cat))];
+
   let ssHtml = '';
-  if (sinstock.length) {
+  if (sinstockV.length) {
     ssHtml += `<div class="dash-ss-divider">Sin stock · ${sinstock.length}</div>`;
-    ssHtml += sinstock.map(s => `<div class="dash-ss-item" onclick="irAConsultasConFiltro('${htmlEsc(s.cat)}')" onmouseenter="this.querySelector('.dash-row-arr').style.opacity='1'" onmouseleave="this.querySelector('.dash-row-arr').style.opacity='0'">
+    ssHtml += sinstockV.map(s => `<div class="dash-ss-item" onclick="irAConsultasConFiltro('${htmlEsc(s.cat)}')" onmouseenter="this.querySelector('.dash-row-arr').style.opacity='1'" onmouseleave="this.querySelector('.dash-row-arr').style.opacity='0'">
       <div class="dash-ss-body">
         <div class="dash-ss-nombre">${htmlEsc(s.nombre)}</div>
         <div class="dash-ss-cat">${htmlEsc(s.cat)}</div>
@@ -1885,9 +1923,9 @@ function renderDashboard() {
       ${ARR}
     </div>`).join('');
   }
-  if (bajo.length) {
+  if (bajoV.length) {
     ssHtml += `<div class="dash-ss-divider">Stock bajo · ${bajo.length}</div>`;
-    ssHtml += bajo.map(s => `<div class="dash-ss-item" onclick="irAConsultasConFiltro('${htmlEsc(s.cat)}')" onmouseenter="this.querySelector('.dash-row-arr').style.opacity='1'" onmouseleave="this.querySelector('.dash-row-arr').style.opacity='0'">
+    ssHtml += bajoV.map(s => `<div class="dash-ss-item" onclick="irAConsultasConFiltro('${htmlEsc(s.cat)}')" onmouseenter="this.querySelector('.dash-row-arr').style.opacity='1'" onmouseleave="this.querySelector('.dash-row-arr').style.opacity='0'">
       <div class="dash-ss-body">
         <div class="dash-ss-nombre">${htmlEsc(s.nombre)}</div>
         <div class="dash-ss-cat">${htmlEsc(s.cat)}</div>
@@ -1899,6 +1937,7 @@ function renderDashboard() {
       ${ARR}
     </div>`).join('');
   }
+  if (ssRest.length) ssHtml += _verRestanteBtn(ssCatsRest, `Alertas de bajo stock (${ssRest.length} más)`, ssRest.length);
   document.getElementById('dash-ss-list').innerHTML = ssHtml || '<div class="dash-empty">Sin alertas de stock ✓</div>';
 
   // ── ERRORES DE CARGA ────────────────────────────
@@ -1966,8 +2005,11 @@ function renderDashboard() {
   document.getElementById('stat-errores').textContent = errores.length;
   document.getElementById('dash-err-count').textContent = errores.length + ' detectado' + (errores.length !== 1 ? 's' : '');
 
+  const errVisible = errores.slice(0, LIMIT);
+  const errRest    = errores.slice(LIMIT);
+  const errCatsRest = [...new Set(errRest.map(e => stripAI(e.catalogo || e.nombre)))];
   document.getElementById('dash-err-list').innerHTML = errores.length
-    ? errores.map(e => `<div class="dash-err-item" onclick="irAConsultasConFiltro('${htmlEsc(e.catalogo || e.nombre)}')" onmouseenter="this.querySelector('.dash-row-arr').style.opacity='1'" onmouseleave="this.querySelector('.dash-row-arr').style.opacity='0'" title="Click para ver en Consultas">
+    ? errVisible.map(e => `<div class="dash-err-item" onclick="irAConsultasConFiltro('${htmlEsc(e.catalogo || e.nombre)}')" onmouseenter="this.querySelector('.dash-row-arr').style.opacity='1'" onmouseleave="this.querySelector('.dash-row-arr').style.opacity='0'" title="Click para ver en Consultas">
         <div class="dash-err-icon ${e.tipo}">${e.icon}</div>
         <div class="dash-err-body">
           <div class="dash-err-nombre">${htmlEsc(e.nombre)}</div>
@@ -1975,7 +2017,7 @@ function renderDashboard() {
         </div>
         <div class="dash-err-badge ${e.tipo}">${e.badge}</div>
         ${ARR}
-      </div>`).join('')
+      </div>`).join('') + (errRest.length ? _verRestanteBtn(errCatsRest, `Posibles errores de carga (${errRest.length} más)`, errRest.length) : '')
     : '<div class="dash-empty">Sin errores detectados ✓</div>';
 
   // ── CALENDARIO ──────────────────────────────────
@@ -2479,6 +2521,23 @@ function sortConsulta(col) {
 }
 
 function renderConsulta() {
+  // Banner del dashboard si venimos con filtro de set
+  let bannerEl = document.getElementById('consulta-dash-banner');
+  if (_dashFiltroSet) {
+    if (!bannerEl) {
+      bannerEl = document.createElement('div');
+      bannerEl.id = 'consulta-dash-banner';
+      bannerEl.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--accent-l);border:1px solid var(--accent);border-radius:8px;padding:8px 14px;margin-bottom:14px;font-size:12px;color:var(--accent-d)';
+      const pageConsultas = document.getElementById('page-consultas');
+      const yearTabs = document.getElementById('consulta-year-tabs');
+      pageConsultas.insertBefore(bannerEl, yearTabs);
+    }
+    bannerEl.innerHTML = `<span>📊 Mostrando: <strong>${_dashFiltroLabel}</strong></span><button onclick="_limpiarDashFiltro()" style="background:none;border:1px solid var(--accent);border-radius:5px;color:var(--accent-d);font-size:11px;padding:2px 9px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">✕ Limpiar filtro</button>`;
+    bannerEl.style.display = 'flex';
+  } else if (bannerEl) {
+    bannerEl.style.display = 'none';
+  }
+
   renderYearTabs('consulta-year-tabs', consultaYear, 'setConsultaYear');
   let items = consultaYear==='todos' ? stock : stock.filter(i=>getAnio(i)===consultaYear);
   if (consultaQuery) items=items.filter(i=>
@@ -2486,6 +2545,7 @@ function renderConsulta() {
     i._cat.includes(consultaQuery)||
     i._lot.includes(consultaQuery));
   if (consultaFilter!=='todos') items=items.filter(i=>getEstado(i)===consultaFilter);
+  if (_dashFiltroSet) items=items.filter(i=>_dashFiltroSet.has(stripAI(i.catalogo||'').toUpperCase()));
 
   // ── Filtros personalizados ──────────────────────────────────
   if (fpFiltros.estados.size)   items = items.filter(i => fpFiltros.estados.has(getEstado(i)));

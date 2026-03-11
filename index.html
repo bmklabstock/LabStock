@@ -3666,22 +3666,47 @@ function processBDBarcodeCode(raw) {
   if (lote) { document.getElementById('bd-lote').value        = lote; flashFill('bd-lote'); }
   if (venc) { document.getElementById('bd-vencimiento').value = venc; flashFill('bd-vencimiento'); }
 
-  // Check if this catalogue already has a raw code registered (different unit, same product)
+  // ── Check if this catalogue already has a raw code registered ──────────────
+  // Use GS1-extracted cat first; fall back to whatever is already typed in the field
   const catFinal = cat || document.getElementById('bd-catalogo').value.trim();
   if (catFinal) {
     const dupCat = bdRecords.find(r => r.codigoRaw && stripAI(r.catalogo).toLowerCase() === stripAI(catFinal).toLowerCase());
     if (dupCat) {
+      // Pre-fill fields from existing record so user can review/update, but don't block
+      if (!document.getElementById('bd-nombre').value.trim())    document.getElementById('bd-nombre').value    = dupCat.nombre;
+      if (!document.getElementById('bd-catalogo').value.trim())  document.getElementById('bd-catalogo').value  = dupCat.catalogo;
+      if (!document.getElementById('bd-lote').value.trim() && dupCat.lote) document.getElementById('bd-lote').value = dupCat.lote;
+      if (!document.getElementById('bd-vencimiento').value && dupCat.vencimiento && dupCat.vencimiento.toUpperCase() !== 'NA') {
+        document.getElementById('bd-vencimiento').value = dupCat.vencimiento;
+      }
       statusEl.className = 'barcode-status notfound';
-      statusEl.textContent = `⚠️ Este catálogo ya tiene un código RAW registrado: ${dupCat.nombre}`;
-      toast(`⚠️ Catálogo ya registrado en BD: ${dupCat.nombre}`, 'error');
+      statusEl.textContent = `⚠️ Catálogo ya registrado con otro código RAW: ${dupCat.nombre} — revisá y guardá para actualizar`;
+      toast(`⚠️ Catálogo ya en BD: ${dupCat.nombre} — se precargaron los datos`, 'error');
       return;
     }
   }
 
-  statusEl.className = 'barcode-status ' + (Object.keys(parsed).length ? 'warn' : 'idle');
-  statusEl.textContent = Object.keys(parsed).length
-    ? `GS1 detectado${cat?' · Cat:'+cat:''}${lote?' · Lote:'+lote:''} — completá los datos y guardá`
-    : 'Código registrado — completá los datos y guardá';
+  // ── Also warn if the same product name already exists (no catalogue match) ─
+  // This catches the case where GS1 gave no catalogue and the field is empty
+  if (!catFinal) {
+    const nomField = document.getElementById('bd-nombre').value.trim().toLowerCase();
+    if (nomField.length >= 4) {
+      const dupNom = bdRecords.find(r => r.codigoRaw && r.nombre.toLowerCase().includes(nomField));
+      if (dupNom) {
+        statusEl.className = 'barcode-status notfound';
+        statusEl.textContent = `⚠️ Posible duplicado por nombre: ${dupNom.nombre} — revisá antes de guardar`;
+        toast(`⚠️ Posible duplicado: ${dupNom.nombre}`, 'error');
+      }
+    }
+  }
+
+  statusEl.className = statusEl.className.includes('notfound') ? statusEl.className
+    : 'barcode-status ' + (Object.keys(parsed).length ? 'warn' : 'idle');
+  if (!statusEl.className.includes('notfound')) {
+    statusEl.textContent = Object.keys(parsed).length
+      ? `GS1 detectado${cat?' · Cat:'+cat:''}${lote?' · Lote:'+lote:''} — completá los datos y guardá`
+      : 'Código registrado — completá los datos y guardá';
+  }
 }
 
 // ── Save to BD ────────────────────────────────────────────────

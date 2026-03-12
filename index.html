@@ -2912,8 +2912,11 @@ ${nombres}
 Esta acción no se puede deshacer.`)) return;
 
   const btn = document.querySelector('.btn-eliminar');
-  btn.textContent = 'Eliminando…'; btn.disabled = true;
+  btn.textContent = 'Sincronizando…'; btn.disabled = true;
   try {
+    // Sync BEFORE calculating rowIndex to avoid stale indices from prior inserts/edits
+    await syncFromSheets();
+    btn.textContent = 'Eliminando…';
     // Group by sheet, sort rows descending to delete from bottom up (avoid index shift)
     const toDelete = [...consultaSelected].map(id => stock.find(x=>x.id===id)).filter(Boolean);
     const bySheet = {};

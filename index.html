@@ -1574,6 +1574,8 @@ async function ensureSheetExists(year) {
 // SHEETS API — WRITE (Baja — update specific row)
 // ═══════════════════════════════════════════════════════════════
 async function updateRowInSheet(item) {
+  // Verify row hasn't shifted before writing (baja/modificación)
+  await verifyRowIntegrity(item);
   // rowIndex is stored as rowIdx+1 where rowIdx skips the header → it IS the 1-based sheet row
   const sheetRow = item.rowIndex;
   // 2022/2023 no tienen checkbox en col A → datos empiezan en col A (F=InicioConsumo, G=FinConsumo, H=Temp, I=Rend, J=Obs)
@@ -1591,6 +1593,64 @@ async function updateRowInSheet(item) {
       item.obs           || 'NA'
     ]] }
   });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ROW INTEGRITY VERIFICATION
+// ═══════════════════════════════════════════════════════════════
+// Reads the actual cell from Sheets and compares to in-memory item
+// before any destructive write. Throws a descriptive error if mismatch.
+async function verifyRowIntegrity(item) {
+  const sheetRow = item.rowIndex;
+  const checkRange = `${item.sheetName}!C${sheetRow}:E${sheetRow}`; // C=nombre, D=cat, E=lote
+  const resp = await gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: checkRange
+  });
+  const vals = resp.result.values?.[0] || [];
+  const sheetNombre = (vals[0] || '').trim().toLowerCase();
+  const sheetLote   = (vals[2] || '').trim().toLowerCase();
+  const itemNombre  = (item.nombre || '').trim().toLowerCase();
+  const itemLote    = (item.lote   || '').trim().toLowerCase();
+  if (sheetNombre !== itemNombre || sheetLote !== itemLote) {
+    throw new Error(
+      `⚠️ Desincronización detectada en fila ${sheetRow}.
+` +
+      `El sistema esperaba: "${item.nombre}" · lote "${item.lote}"
+` +
+      `Sheets contiene:     "${vals[0] || '(vacío)'}" · lote "${vals[2] || '(vacío)')"
+
+` +
+      `La operación fue cancelada para evitar pérdida de datos.
+` +
+      `Sincronizá manualmente y volvé a intentarlo.`
+    );
+  }
+}
+
+async function verifyBDRowIntegrity(record) {
+  const checkRange = `${BD_SHEET}!A${record.rowIndex}:B${record.rowIndex}`; // A=raw, B=nombre
+  const resp = await gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: checkRange
+  });
+  const vals = resp.result.values?.[0] || [];
+  const sheetRaw    = (vals[0] || '').trim();
+  const sheetNombre = (vals[1] || '').trim().toLowerCase();
+  const recRaw    = (record.codigoRaw || '').trim();
+  const recNombre = (record.nombre   || '').trim().toLowerCase();
+  if (sheetRaw !== recRaw || sheetNombre !== recNombre) {
+    throw new Error(
+      `⚠️ Desincronización en BD fila ${record.rowIndex}.
+` +
+      `Esperado: "${record.nombre}" · código "${record.codigoRaw}"
+` +
+      `Sheets:   "${vals[1] || '(vacío)'}" · código "${vals[0] || '(vacío)'}".
+
+` +
+      `Operación cancelada. Sincronizá y reintentá.`
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2445,6 +2505,8 @@ async function confirmarBaja() {
 
   try {
     const item = stock.find(i=>i.id===bajaSelectedId);
+    // Snapshot BEFORE modifying
+    const estadoAnterior = snapshotItem(item);
     item.inicioConsumo = toSheetDate(inicio);
     item.finConsumo    = toSheetDate(fin);
     item.rendimiento   = rend;
@@ -2452,14 +2514,17 @@ async function confirmarBaja() {
     await updateRowInSheet(item);
     toast(`✓ Baja registrada: "${item.nombre}" — Lote ${item.lote}`);
     await writeLog('Baja', item,
-      `Inicio: ${item.inicioConsumo||'—'} · Fin: ${item.finConsumo||'—'} · Rend: ${item.rendimiento||'—'}`);
+      `Inicio: ${item.inicioConsumo||'—'} · Fin: ${item.finConsumo||'—'} · Rend: ${item.rendimiento||'—'}`,
+      estadoAnterior);
     cancelarBaja();
     document.getElementById('baja-results').classList.remove('show');
     const bsi = document.getElementById('baja-search-input'); if(bsi) bsi.value='';
     await syncFromSheets();
   } catch(e) {
     console.error(e);
-    toast('Error al actualizar Sheets: '+(e.result?.error?.message||e.message),'error');
+    const msg = e.result?.error?.message || e.message || String(e);
+    if (msg.startsWith('⚠️ Desincronización')) { alert(msg); await syncFromSheets(); }
+    else toast('Error al actualizar Sheets: ' + msg, 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Confirmar baja en Sheets';
@@ -2873,12 +2938,16 @@ async function guardarModificacion() {
   // Validar campo obligatorio antes de cerrar
   if (!updates.fecha) { toast('La fecha de llegada es obligatoria', 'error'); return; }
 
+  // Snapshot BEFORE applying changes
+  const estadoAnteriorMod = snapshotItem(item);
   // NOW close modal
   cerrarModal();
   Object.assign(item, updates);
 
   toast('Guardando…', 'info');
   try {
+    // Verify row integrity before overwriting
+    await verifyRowIntegrity(item);
     const sheetRow = item.rowIndex;
     // 2022/2023: sin checkbox → datos desde col A. 2024+: datos desde col B
     const writeRange = `${item.sheetName}!B${sheetRow}:K${sheetRow}`;
@@ -2892,12 +2961,15 @@ async function guardarModificacion() {
     });
     toast('✓ Insumo modificado correctamente', 'success');
     await writeLog('Modificación', item,
-      `Temp: ${item.tempAlmacen} · Venc: ${item.vencimiento} · Fin: ${item.finConsumo||'—'}`);
+      `Temp: ${item.tempAlmacen} · Venc: ${item.vencimiento} · Fin: ${item.finConsumo||'—'}`,
+      estadoAnteriorMod);
     consultaSelected.clear();
     updateConsultaActions();
     await syncFromSheets();
   } catch(e) {
-    toast('Error al guardar: ' + (e.result?.error?.message || e.message), 'error');
+    const msg = e.result?.error?.message || e.message || String(e);
+    if (msg.startsWith('⚠️ Desincronización')) { alert(msg); await syncFromSheets(); }
+    else toast('Error al guardar: ' + msg, 'error');
   }
 }
 
@@ -2926,6 +2998,10 @@ Esta acción no se puede deshacer.`)) return;
     });
     for (const [sheetName, rows] of Object.entries(bySheet)) {
       const sheetId = await getSheetId(sheetName);
+      // Verify every row before deleting — aborts if any row has shifted
+      for (const item of toDelete.filter(i => i.sheetName === sheetName)) {
+        await verifyRowIntegrity(item);
+      }
       // Sort descending so higher row indices delete first (avoids index shift)
       const sortedDesc = rows.slice().sort((a,b)=>b-a);
       // Send all deletes in a single batchUpdate request
@@ -2942,7 +3018,9 @@ Esta acción no se puede deshacer.`)) return;
     updateConsultaActions();
     await syncFromSheets();
   } catch(e) {
-    toast('Error al eliminar: ' + (e.result?.error?.message || e.message), 'error');
+    const msg = e.result?.error?.message || e.message || String(e);
+    if (msg.startsWith('⚠️ Desincronización')) { alert(msg); await syncFromSheets(); }
+    else toast('Error al eliminar: ' + msg, 'error');
   } finally {
     btn.textContent = '🗑️ Eliminar seleccionados'; btn.disabled = false;
   }
@@ -3386,27 +3464,42 @@ async function ensureLogSheet() {
   });
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `${LOG_SHEET}!A1:G1`,
+    range: `${LOG_SHEET}!A1:H1`,
     valueInputOption: 'USER_ENTERED',
-    resource: { values: [['Timestamp','Usuario','Acción','Insumo','Catálogo','Lote','Detalle']] }
+    resource: { values: [['Timestamp','Usuario','Acción','Insumo','Catálogo','Lote','Detalle','Estado anterior']] }
   });
 }
 
-async function writeLog(accion, item, detalle = '') {
+async function writeLog(accion, item, detalle = '', estadoAnterior = '') {
   try {
     await ensureLogSheet();
     const usuario = document.getElementById('user-email')?.textContent || 'desconocido';
     const ts = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
     await gapi.client.sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
-      range: `${LOG_SHEET}!A:G`,
+      range: `${LOG_SHEET}!A:H`,
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
-      resource: { values: [[ts, usuario, accion, item.nombre || '', item.catalogo || '', item.lote || '', detalle]] }
+      resource: { values: [[ts, usuario, accion, item.nombre || '', item.catalogo || '', item.lote || '', detalle, estadoAnterior]] }
     });
   } catch(e) {
     console.warn('Log write failed (non-critical):', e);
   }
+}
+
+// Builds a human-readable snapshot string of an item's editable fields
+function snapshotItem(item) {
+  const parts = [];
+  if (item.nombre)        parts.push(`Nombre: ${item.nombre}`);
+  if (item.catalogo)      parts.push(`Cat: ${item.catalogo}`);
+  if (item.lote)          parts.push(`Lote: ${item.lote}`);
+  if (item.vencimiento)   parts.push(`Venc: ${item.vencimiento}`);
+  if (item.inicioConsumo) parts.push(`Inicio: ${item.inicioConsumo}`);
+  if (item.finConsumo)    parts.push(`Fin: ${item.finConsumo}`);
+  if (item.tempAlmacen)   parts.push(`Temp: ${item.tempAlmacen}`);
+  if (item.rendimiento)   parts.push(`Rend: ${item.rendimiento}`);
+  if (item.obs)           parts.push(`Obs: ${item.obs}`);
+  return parts.join(' · ');
 }
 
 async function loadHistorial(item) {
@@ -3426,7 +3519,7 @@ async function loadHistorial(item) {
     }
     const icons = { 'Alta': { dot: 'create', emoji: '➕' }, 'Baja': { dot: 'baja', emoji: '📤' }, 'Modificación': { dot: 'modify', emoji: '✏️' } };
     listEl.innerHTML = matching.map(r => {
-      const [ts, usuario, accion, nombre, catalogo, lote, detalle] = r;
+      const [ts, usuario, accion, nombre, catalogo, lote, detalle, estadoAnterior] = r;
       const style = icons[accion] || { dot: 'history-dot-modify', emoji: '•' };
       return `<div class="history-item">
         <div class="history-dot ${style.dot}"></div>
@@ -3434,6 +3527,7 @@ async function loadHistorial(item) {
           <div class="history-action">${style.emoji} ${htmlEsc(accion || '—')}</div>
           <div class="history-meta">${htmlEsc(ts || '')} · ${htmlEsc(usuario || '')}</div>
           ${detalle ? `<div class="history-detail">${htmlEsc(detalle)}</div>` : ''}
+          ${estadoAnterior ? `<div class="history-detail" style="color:var(--dim);font-size:11px;margin-top:3px">↩ Antes: ${htmlEsc(estadoAnterior)}</div>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -4212,6 +4306,7 @@ async function guardarEnBD() {
     }
 
     if (existing) {
+      await verifyBDRowIntegrity(existing);
       await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
         range: `${BD_SHEET}!A${existing.rowIndex}:E${existing.rowIndex}`,
@@ -4233,7 +4328,9 @@ async function guardarEnBD() {
     limpiarBD();
   } catch(e) {
     console.error('guardarEnBD error', e);
-    toast('Error al guardar', 'error');
+    const msg = e.result?.error?.message || e.message || String(e);
+    if (msg.startsWith('⚠️ Desincronización')) { alert(msg); await syncBD(); }
+    else toast('Error al guardar: ' + msg, 'error');
   }
 }
 
@@ -4241,6 +4338,13 @@ async function guardarEnBD() {
 async function eliminarDeBD(rowIndex, nombre) {
   if (!confirm(`¿Eliminar "${nombre}" de la base de datos?`)) return;
   try {
+    // Re-sync BD to get fresh rowIndex before clearing
+    await syncBD();
+    const fresh = bdRecords.find(r => r.nombre === nombre && r.rowIndex === rowIndex);
+    if (!fresh) {
+      toast('No se encontró el registro — puede haber sido eliminado por otra sesión. Recargá.', 'error');
+      return;
+    }
     // Clear the row (don't delete to preserve rowIndex stability; syncBD filters empty)
     await gapi.client.sheets.spreadsheets.values.clear({
       spreadsheetId: SHEET_ID,

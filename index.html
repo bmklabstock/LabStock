@@ -656,6 +656,9 @@ mark{background:transparent;color:var(--accent);font-weight:700}
         <div class="dash-panel-title">Posibles errores de carga</div>
         <span class="dash-panel-count" id="panel-count-errores">—</span>
       </div>
+      <div style="padding:8px 14px;border-bottom:1px solid var(--border);overflow-x:auto">
+        <div class="dash-seg-tabs" id="errores-year-tabs" style="width:max-content"></div>
+      </div>
       <div class="dash-panel-list" id="panel-errores"></div>
     </div>
   </div>
@@ -1789,10 +1792,16 @@ function renderYearTabs(containerId, currentYear, onSelectFn) {
 // DASHBOARD v2
 // ═══════════════════════════════════════════════════════════════
 let dashProxDays = 60;
+let dashErroresYear = 'todos';
 function setProxDays(d) {
   dashProxDays = d;
-  document.querySelectorAll('.dash-seg-tab').forEach(t => t.classList.toggle('active', +t.dataset.d === d));
+  document.querySelectorAll('#prox-tabs .dash-seg-tab').forEach(t => t.classList.toggle('active', +t.dataset.d === d));
   renderDashPanelProximos();
+}
+
+function setErroresYear(y) {
+  dashErroresYear = y;
+  renderDashPanelErrores();
 }
 
 function renderDashboard() {
@@ -2006,10 +2015,14 @@ function calcDashErrores() {
   const MIN_YEAR = 2000, MAX_YEAR = hoy.getFullYear() + 10;
 
   // Frecuencias: por nombre → catálogo más común; por catálogo → nombre más común
+  // Excluir NA, vacíos — no tienen catálogo/nombre real y no deben agruparse
+  const isNA = v => !v || v.trim() === '' || v.trim().toUpperCase() === 'NA';
   const freqCatPorNombre = {}, freqNombrePorCat = {};
   for (const i of stock) {
-    const nom = i.nombre.trim(), cat = stripAI(i.catalogo).trim().toLowerCase();
-    if (nom && cat) {
+    const nom = i.nombre.trim();
+    const cat = stripAI(i.catalogo).trim().toLowerCase();
+    // Solo construir frecuencias si AMBOS son valores reales, no NA
+    if (nom && !isNA(nom) && cat && !isNA(cat)) {
       if (!freqCatPorNombre[nom]) freqCatPorNombre[nom] = {};
       freqCatPorNombre[nom][cat] = (freqCatPorNombre[nom][cat]||0) + 1;
       if (!freqNombrePorCat[cat]) freqNombrePorCat[cat] = {};
@@ -2033,24 +2046,34 @@ function calcDashErrores() {
       errLogico.push({ i, desc: `Fin ${fmtFecha(i.finConsumo)} anterior al inicio ${fmtFecha(i.inicioConsumo)}` });
       continue;
     }
-    // CATÁLOGO: distinto al más frecuente para este nombre
+    // Saltar checks de catálogo/nombre si el ítem tiene NA en cualquiera de los dos campos
     const nom = i.nombre.trim();
     const myCat = stripAI(i.catalogo).trim().toLowerCase();
-    if (nom && myCat && freqCatPorNombre[nom]) {
-      const [majCat, majCount] = majority(freqCatPorNombre[nom]);
-      const total = Object.values(freqCatPorNombre[nom]).reduce((a,b)=>a+b,0);
-      if (majCat !== myCat && majCount / total >= 0.7 && total >= 3) {
-        errCatalogo.push({ i, desc: `Cat. <strong>${htmlEsc(stripAI(i.catalogo))}</strong> — mayoría usa <strong>${htmlEsc(majCat)}</strong> (${majCount}/${total})` });
-        continue;
+    if (isNA(nom) || isNA(myCat)) continue;
+
+    // CATÁLOGO: distinto al más frecuente para este nombre
+    // Solo marca si el grupo tiene al menos 2 catálogos distintos (descarta insumos únicos)
+    if (freqCatPorNombre[nom]) {
+      const cats = freqCatPorNombre[nom];
+      if (Object.keys(cats).length >= 2) {
+        const [majCat, majCount] = majority(cats);
+        const total = Object.values(cats).reduce((a,b)=>a+b,0);
+        if (majCat !== myCat && majCount / total >= 0.7 && total >= 3) {
+          errCatalogo.push({ i, desc: `Cat. <strong>${htmlEsc(stripAI(i.catalogo))}</strong> — mayoría usa <strong>${htmlEsc(majCat)}</strong> (${majCount}/${total})` });
+          continue;
+        }
       }
     }
     // NOMBRE: distinto al más frecuente para este catálogo
-    const cat = stripAI(i.catalogo).trim().toLowerCase();
-    if (cat && nom && freqNombrePorCat[cat]) {
-      const [majNom, majCount] = majority(freqNombrePorCat[cat]);
-      const total = Object.values(freqNombrePorCat[cat]).reduce((a,b)=>a+b,0);
-      if (majNom !== nom && majCount / total >= 0.7 && total >= 3) {
-        errNombre.push({ i, desc: `Nombre diverge — mayoría cargada como <strong>${htmlEsc(majNom)}</strong>` });
+    // Solo marca si el grupo tiene al menos 2 nombres distintos (descarta insumos únicos)
+    if (freqNombrePorCat[myCat]) {
+      const noms = freqNombrePorCat[myCat];
+      if (Object.keys(noms).length >= 2) {
+        const [majNom, majCount] = majority(noms);
+        const total = Object.values(noms).reduce((a,b)=>a+b,0);
+        if (majNom !== nom && majCount / total >= 0.7 && total >= 3) {
+          errNombre.push({ i, desc: `Nombre diverge — mayoría cargada como <strong>${htmlEsc(majNom)}</strong>` });
+        }
       }
     }
   }
@@ -2058,8 +2081,24 @@ function calcDashErrores() {
 }
 
 function renderDashPanelErrores() {
+  // ── Tabs de año: construir dinámicamente ─────────────────────
+  const años = getAnios().slice().reverse(); // más reciente primero
+  const tabsEl = document.getElementById('errores-year-tabs');
+  if (tabsEl) {
+    tabsEl.innerHTML = ['todos', ...años].map(a =>
+      `<button class="dash-seg-tab${dashErroresYear===a?' active':''}" style="font-size:10px;padding:3px 8px" onclick="setErroresYear('${a}')">${a === 'todos' ? 'TODOS' : a}</button>`
+    ).join('');
+  }
+
+  // ── Calcular errores y filtrar por año ───────────────────────
   const err = calcDashErrores();
-  const total = err.fecha.length + err.logico.length + err.catalogo.length + err.nombre.length;
+  const filterYear = e => dashErroresYear === 'todos' || getAnio(e.i) === dashErroresYear;
+  const fe = err.fecha.filter(filterYear);
+  const fl = err.logico.filter(filterYear);
+  const fc = err.catalogo.filter(filterYear);
+  const fn = err.nombre.filter(filterYear);
+
+  const total = fe.length + fl.length + fc.length + fn.length;
   document.getElementById('panel-count-errores').textContent = total + ' detectados';
 
   const seccion = (label, items, tipo, icon) => {
@@ -2077,10 +2116,10 @@ function renderDashPanelErrores() {
     return `<div class="dash-list-section">${label} <span class="dash-list-section-count">${items.length}</span></div>${rows}`;
   };
 
-  let html = seccion('Fechas imposibles', err.fecha, 'fecha', '📅')
-           + seccion('Fin anterior al inicio', err.logico, 'logico', '⚠️')
-           + seccion('Catálogo inusual vs grupo', err.catalogo, 'cat', '🗂️')
-           + seccion('Nombre inusual vs grupo', err.nombre, 'nombre', '✏️');
+  let html = seccion('Fechas imposibles', fe, 'fecha', '📅')
+           + seccion('Fin anterior al inicio', fl, 'logico', '⚠️')
+           + seccion('Catálogo inusual vs grupo', fc, 'cat', '🗂️')
+           + seccion('Nombre inusual vs grupo', fn, 'nombre', '✏️');
 
   if (!html) html = '<div style="padding:28px;text-align:center;color:var(--dim);font-size:13px">Sin errores detectados</div>';
   document.getElementById('panel-errores').innerHTML = html;
